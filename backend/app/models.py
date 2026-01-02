@@ -5,15 +5,16 @@ This module contains the core data structures for metadata, provenance,
 and content representation used throughout the DGC platform.
 """
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any
-from enum import Enum
 import json
+from dataclasses import dataclass, field
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class ContentType(Enum):
     """Supported content types for AI generation."""
+
     IMAGE = "IMAGE"
     TEXT = "TEXT"
     MUSIC = "MUSIC"
@@ -21,6 +22,7 @@ class ContentType(Enum):
 
 class DerivationType(Enum):
     """Types of content derivation."""
+
     ORIGINAL = "ORIGINAL"
     REMIX = "REMIX"
     EVOLUTION = "EVOLUTION"
@@ -29,6 +31,7 @@ class DerivationType(Enum):
 @dataclass
 class Attribute:
     """NFT attribute following OpenSea standard."""
+
     trait_type: str
     value: str
 
@@ -36,6 +39,7 @@ class Attribute:
 @dataclass
 class Provenance:
     """Provenance information for AI-generated content."""
+
     model_version: str
     model_hash: str
     prompt_hash: str
@@ -49,6 +53,7 @@ class Provenance:
 @dataclass
 class Evolution:
     """Evolution/derivation information for content."""
+
     parent_tokens: List[int] = field(default_factory=list)
     derivation_type: DerivationType = DerivationType.ORIGINAL
 
@@ -62,6 +67,7 @@ class Metadata:
     Includes all required fields per Requirements 8.4: contentHash, creatorAddress,
     prompt, modelVersion, timestamp, and generationParameters.
     """
+
     # Core NFT metadata (ERC-721 standard)
     name: str
     description: str
@@ -99,7 +105,7 @@ class Metadata:
             raise ValueError(f"Failed to serialize metadata to JSON: {e}")
 
     @classmethod
-    def from_json(cls, json_str: str) -> 'Metadata':
+    def from_json(cls, json_str: str) -> "Metadata":
         """
         Deserialize metadata from JSON string.
 
@@ -134,9 +140,8 @@ class Metadata:
             "timestamp": self.timestamp,
             "generation_parameters": self.generation_parameters,
             "attributes": [
-                {"trait_type": attr.trait_type, "value": attr.value}
-                for attr in self.attributes
-            ]
+                {"trait_type": attr.trait_type, "value": attr.value} for attr in self.attributes
+            ],
         }
 
         if self.provenance:
@@ -148,24 +153,28 @@ class Metadata:
                 "parameters": self.provenance.parameters,
                 "timestamp": self.provenance.timestamp,
                 "creator": self.provenance.creator,
-                "collaborators": self.provenance.collaborators
+                "collaborators": self.provenance.collaborators,
             }
 
         if self.evolution:
             result["evolution"] = {
                 "parent_tokens": self.evolution.parent_tokens,
-                "derivation_type": self.evolution.derivation_type.value
+                "derivation_type": self.evolution.derivation_type.value,
             }
 
         return result
 
     @classmethod
-    def _from_dict(cls, data: Dict[str, Any]) -> 'Metadata':
+    def _from_dict(cls, data: Dict[str, Any]) -> "Metadata":
         """Create metadata from dictionary (from JSON deserialization)."""
         # Validate required fields per Requirements 8.4
         required_fields = [
-            "content_hash", "creator_address", "prompt",
-            "model_version", "timestamp", "generation_parameters"
+            "content_hash",
+            "creator_address",
+            "prompt",
+            "model_version",
+            "timestamp",
+            "generation_parameters",
         ]
 
         missing_fields = [field for field in required_fields if field not in data]
@@ -186,17 +195,24 @@ class Metadata:
         try:
             content_type = ContentType(data["content_type"])
         except ValueError:
-            raise ValueError(f"Invalid content_type: {data['content_type']}. Must be one of: {[ct.value for ct in ContentType]}")
+            raise ValueError(
+                f"Invalid content_type: {data['content_type']}. Must be one of: {[ct.value for ct in ContentType]}"
+            )
 
         # Parse attributes
         attributes = []
         for attr_data in data.get("attributes", []):
-            if not isinstance(attr_data, dict) or "trait_type" not in attr_data or "value" not in attr_data:
-                raise ValueError("Invalid attribute format. Must have 'trait_type' and 'value' fields")
-            attributes.append(Attribute(
-                trait_type=attr_data["trait_type"],
-                value=str(attr_data["value"])
-            ))
+            if (
+                not isinstance(attr_data, dict)
+                or "trait_type" not in attr_data
+                or "value" not in attr_data
+            ):
+                raise ValueError(
+                    "Invalid attribute format. Must have 'trait_type' and 'value' fields"
+                )
+            attributes.append(
+                Attribute(trait_type=attr_data["trait_type"], value=str(attr_data["value"]))
+            )
 
         # Parse provenance if present
         provenance = None
@@ -210,7 +226,7 @@ class Metadata:
                 parameters=prov_data["parameters"],
                 timestamp=prov_data["timestamp"],
                 creator=prov_data["creator"],
-                collaborators=prov_data.get("collaborators", [])
+                collaborators=prov_data.get("collaborators", []),
             )
 
         # Parse evolution if present
@@ -223,8 +239,7 @@ class Metadata:
                 raise ValueError(f"Invalid derivation_type: {evo_data['derivation_type']}")
 
             evolution = Evolution(
-                parent_tokens=evo_data.get("parent_tokens", []),
-                derivation_type=derivation_type
+                parent_tokens=evo_data.get("parent_tokens", []), derivation_type=derivation_type
             )
 
         # Validate types for required fields
@@ -246,7 +261,7 @@ class Metadata:
             generation_parameters=data["generation_parameters"],
             attributes=attributes,
             provenance=provenance,
-            evolution=evolution
+            evolution=evolution,
         )
 
         # Validate the created metadata
@@ -269,7 +284,7 @@ class Metadata:
             "content_hash": self.content_hash,
             "creator_address": self.creator_address,
             "prompt": self.prompt,
-            "model_version": self.model_version
+            "model_version": self.model_version,
         }
 
         for field_name, value in string_fields.items():
@@ -278,7 +293,9 @@ class Metadata:
 
         # Validate creator_address format (basic Ethereum address check)
         if not self.creator_address.startswith("0x") or len(self.creator_address) != 42:
-            raise ValueError("creator_address must be a valid Ethereum address (0x followed by 40 hex characters)")
+            raise ValueError(
+                "creator_address must be a valid Ethereum address (0x followed by 40 hex characters)"
+            )
 
         # Validate timestamp is positive
         if self.timestamp <= 0:
@@ -297,9 +314,15 @@ class Metadata:
 
         # Validate provenance if present
         if self.provenance:
-            if not isinstance(self.provenance.model_hash, str) or not self.provenance.model_hash.strip():
+            if (
+                not isinstance(self.provenance.model_hash, str)
+                or not self.provenance.model_hash.strip()
+            ):
                 raise ValueError("provenance.model_hash must be a non-empty string")
-            if not isinstance(self.provenance.prompt_hash, str) or not self.provenance.prompt_hash.strip():
+            if (
+                not isinstance(self.provenance.prompt_hash, str)
+                or not self.provenance.prompt_hash.strip()
+            ):
                 raise ValueError("provenance.prompt_hash must be a non-empty string")
             if not isinstance(self.provenance.seed, int):
                 raise ValueError("provenance.seed must be an integer")
@@ -330,7 +353,7 @@ def create_metadata_from_generation(
     model_version: str,
     generation_parameters: Dict[str, Any],
     seed: Optional[int] = None,
-    collaborators: Optional[List[str]] = None
+    collaborators: Optional[List[str]] = None,
 ) -> Metadata:
     """
     Create metadata from AI generation results.
@@ -363,7 +386,7 @@ def create_metadata_from_generation(
     attributes = [
         Attribute("AI Model", model_version),
         Attribute("Generation Date", datetime.fromtimestamp(timestamp).isoformat() + "Z"),
-        Attribute("Content Type", content_type.value)
+        Attribute("Content Type", content_type.value),
     ]
 
     if seed is not None:
@@ -378,7 +401,7 @@ def create_metadata_from_generation(
         parameters=generation_parameters,
         timestamp=timestamp,
         creator=creator_address,
-        collaborators=collaborators or []
+        collaborators=collaborators or [],
     )
 
     metadata = Metadata(
@@ -394,7 +417,7 @@ def create_metadata_from_generation(
         generation_parameters=generation_parameters,
         attributes=attributes,
         provenance=provenance,
-        evolution=Evolution()  # Default to ORIGINAL
+        evolution=Evolution(),  # Default to ORIGINAL
     )
 
     # Validate before returning

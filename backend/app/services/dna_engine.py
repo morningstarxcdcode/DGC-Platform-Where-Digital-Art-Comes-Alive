@@ -10,13 +10,14 @@ import hashlib
 import json
 import random
 from dataclasses import dataclass, field
-from typing import Dict, List, Any, Optional, Tuple
-from enum import Enum
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class GeneType(Enum):
     """Types of genes in content DNA."""
+
     COLOR = "COLOR"
     STYLE = "STYLE"
     MOOD = "MOOD"
@@ -30,6 +31,7 @@ class GeneType(Enum):
 @dataclass
 class Gene:
     """A single gene in the DNA sequence."""
+
     gene_type: GeneType
     value: float  # 0.0 to 1.0
     dominant: bool = True
@@ -49,6 +51,7 @@ class ContentDNA:
         mutation_history: List of mutations that occurred
         created_at: Timestamp of DNA creation
     """
+
     dna_hash: str
     genes: Dict[GeneType, Gene] = field(default_factory=dict)
     generation: int = 0
@@ -64,18 +67,18 @@ class ContentDNA:
                 gene_type.value: {
                     "value": gene.value,
                     "dominant": gene.dominant,
-                    "mutation_rate": gene.mutation_rate
+                    "mutation_rate": gene.mutation_rate,
                 }
                 for gene_type, gene in self.genes.items()
             },
             "generation": self.generation,
             "parent_hashes": self.parent_hashes,
             "mutation_history": self.mutation_history,
-            "created_at": self.created_at
+            "created_at": self.created_at,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ContentDNA':
+    def from_dict(cls, data: Dict[str, Any]) -> "ContentDNA":
         """Create DNA from dictionary."""
         genes = {}
         for gene_type_str, gene_data in data.get("genes", {}).items():
@@ -84,7 +87,7 @@ class ContentDNA:
                 gene_type=gene_type,
                 value=gene_data["value"],
                 dominant=gene_data.get("dominant", True),
-                mutation_rate=gene_data.get("mutation_rate", 0.05)
+                mutation_rate=gene_data.get("mutation_rate", 0.05),
             )
 
         return cls(
@@ -93,7 +96,7 @@ class ContentDNA:
             generation=data.get("generation", 0),
             parent_hashes=data.get("parent_hashes", []),
             mutation_history=data.get("mutation_history", []),
-            created_at=data.get("created_at", int(datetime.now().timestamp()))
+            created_at=data.get("created_at", int(datetime.now().timestamp())),
         )
 
     def get_trait_string(self) -> str:
@@ -135,7 +138,9 @@ class ContentDNAEngine:
         self._random = random.Random(seed)
         self._dna_registry: Dict[str, ContentDNA] = {}
 
-    def generate_dna_from_prompt(self, prompt: str, style: Optional[Dict[str, Any]] = None) -> ContentDNA:
+    def generate_dna_from_prompt(
+        self, prompt: str, style: Optional[Dict[str, Any]] = None
+    ) -> ContentDNA:
         """
         Generate DNA from a text prompt.
 
@@ -167,7 +172,7 @@ class ContentDNAEngine:
                 gene_type=gene_type,
                 value=adjusted_value,
                 dominant=random.random() > 0.3,  # 70% chance dominant
-                mutation_rate=0.03 + random.random() * 0.04  # 3-7% mutation
+                mutation_rate=0.03 + random.random() * 0.04,  # 3-7% mutation
             )
 
         # Apply style overrides if provided
@@ -175,18 +180,13 @@ class ContentDNAEngine:
             genes = self._apply_style_to_genes(genes, style)
 
         # Generate unique DNA hash
-        dna_data = json.dumps({
-            gene_type.value: gene.value
-            for gene_type, gene in genes.items()
-        }, sort_keys=True)
+        dna_data = json.dumps(
+            {gene_type.value: gene.value for gene_type, gene in genes.items()}, sort_keys=True
+        )
         dna_hash = "DNA_" + hashlib.sha256(dna_data.encode()).hexdigest()[:32]
 
         dna = ContentDNA(
-            dna_hash=dna_hash,
-            genes=genes,
-            generation=0,
-            parent_hashes=[],
-            mutation_history=[]
+            dna_hash=dna_hash, genes=genes, generation=0, parent_hashes=[], mutation_history=[]
         )
 
         self._dna_registry[dna_hash] = dna
@@ -199,37 +199,62 @@ class ContentDNAEngine:
 
         keywords = {
             GeneType.COLOR: {
-                "bright": 0.2, "dark": -0.2, "colorful": 0.3,
-                "monochrome": -0.3, "vibrant": 0.25, "muted": -0.15
+                "bright": 0.2,
+                "dark": -0.2,
+                "colorful": 0.3,
+                "monochrome": -0.3,
+                "vibrant": 0.25,
+                "muted": -0.15,
             },
             GeneType.STYLE: {
-                "abstract": 0.3, "realistic": -0.2, "cartoon": 0.2,
-                "photorealistic": -0.3, "artistic": 0.15
+                "abstract": 0.3,
+                "realistic": -0.2,
+                "cartoon": 0.2,
+                "photorealistic": -0.3,
+                "artistic": 0.15,
             },
             GeneType.MOOD: {
-                "happy": 0.3, "sad": -0.2, "peaceful": 0.1,
-                "energetic": 0.2, "calm": -0.1, "dramatic": 0.15
+                "happy": 0.3,
+                "sad": -0.2,
+                "peaceful": 0.1,
+                "energetic": 0.2,
+                "calm": -0.1,
+                "dramatic": 0.15,
             },
             GeneType.COMPLEXITY: {
-                "simple": -0.3, "complex": 0.3, "minimal": -0.25,
-                "detailed": 0.25, "intricate": 0.35
+                "simple": -0.3,
+                "complex": 0.3,
+                "minimal": -0.25,
+                "detailed": 0.25,
+                "intricate": 0.35,
             },
             GeneType.ENERGY: {
-                "dynamic": 0.3, "static": -0.2, "moving": 0.2,
-                "still": -0.15, "action": 0.25
+                "dynamic": 0.3,
+                "static": -0.2,
+                "moving": 0.2,
+                "still": -0.15,
+                "action": 0.25,
             },
             GeneType.HARMONY: {
-                "balanced": 0.2, "chaotic": -0.2, "symmetric": 0.15,
-                "asymmetric": -0.1, "unified": 0.2
+                "balanced": 0.2,
+                "chaotic": -0.2,
+                "symmetric": 0.15,
+                "asymmetric": -0.1,
+                "unified": 0.2,
             },
             GeneType.CONTRAST: {
-                "high contrast": 0.3, "low contrast": -0.2,
-                "bold": 0.2, "subtle": -0.15
+                "high contrast": 0.3,
+                "low contrast": -0.2,
+                "bold": 0.2,
+                "subtle": -0.15,
             },
             GeneType.TEXTURE: {
-                "smooth": -0.2, "rough": 0.2, "textured": 0.25,
-                "glossy": -0.1, "matte": 0.1
-            }
+                "smooth": -0.2,
+                "rough": 0.2,
+                "textured": 0.25,
+                "glossy": -0.1,
+                "matte": 0.1,
+            },
         }
 
         for keyword, value in keywords.get(gene_type, {}).items():
@@ -239,9 +264,7 @@ class ContentDNAEngine:
         return adjustment
 
     def _apply_style_to_genes(
-        self,
-        genes: Dict[GeneType, Gene],
-        style: Dict[str, Any]
+        self, genes: Dict[GeneType, Gene], style: Dict[str, Any]
     ) -> Dict[GeneType, Gene]:
         """Apply style parameters to gene values."""
         for gene_type, gene in genes.items():
@@ -251,10 +274,7 @@ class ContentDNAEngine:
         return genes
 
     def breed_dna(
-        self,
-        parent1_hash: str,
-        parent2_hash: str,
-        mutation_boost: float = 0.0
+        self, parent1_hash: str, parent2_hash: str, mutation_boost: float = 0.0
     ) -> ContentDNA:
         """
         Breed two DNA sequences to create offspring.
@@ -309,12 +329,14 @@ class ContentDNAEngine:
             if mutated:
                 mutation_amount = (self._random.random() - 0.5) * 0.4
                 final_value = max(0.0, min(1.0, base_value + mutation_amount))
-                mutations.append({
-                    "gene": gene_type.value,
-                    "original": base_value,
-                    "mutated": final_value,
-                    "source": source
-                })
+                mutations.append(
+                    {
+                        "gene": gene_type.value,
+                        "original": base_value,
+                        "mutated": final_value,
+                        "source": source,
+                    }
+                )
             else:
                 final_value = base_value
 
@@ -327,14 +349,13 @@ class ContentDNAEngine:
                 gene_type=gene_type,
                 value=final_value,
                 dominant=self._random.random() > 0.3,
-                mutation_rate=new_mutation_rate
+                mutation_rate=new_mutation_rate,
             )
 
         # Generate offspring DNA hash
-        dna_data = json.dumps({
-            gene_type.value: gene.value
-            for gene_type, gene in child_genes.items()
-        }, sort_keys=True)
+        dna_data = json.dumps(
+            {gene_type.value: gene.value for gene_type, gene in child_genes.items()}, sort_keys=True
+        )
         child_hash = "DNA_" + hashlib.sha256(dna_data.encode()).hexdigest()[:32]
 
         child_dna = ContentDNA(
@@ -342,16 +363,14 @@ class ContentDNAEngine:
             genes=child_genes,
             generation=max(parent1.generation, parent2.generation) + 1,
             parent_hashes=[parent1_hash, parent2_hash],
-            mutation_history=mutations
+            mutation_history=mutations,
         )
 
         self._dna_registry[child_hash] = child_dna
         return child_dna
 
     def evolve_dna(
-        self,
-        dna_hash: str,
-        environmental_factors: Optional[Dict[str, float]] = None
+        self, dna_hash: str, environmental_factors: Optional[Dict[str, float]] = None
     ) -> ContentDNA:
         """
         Evolve DNA based on environmental factors (time, interactions, etc.).
@@ -383,25 +402,27 @@ class ContentDNAEngine:
             new_value = max(0.0, min(1.0, gene.value + evolution_amount))
 
             if abs(new_value - gene.value) > 0.02:
-                mutations.append({
-                    "gene": gene_type.value,
-                    "original": gene.value,
-                    "evolved": new_value,
-                    "pressure": pressure
-                })
+                mutations.append(
+                    {
+                        "gene": gene_type.value,
+                        "original": gene.value,
+                        "evolved": new_value,
+                        "pressure": pressure,
+                    }
+                )
 
             evolved_genes[gene_type] = Gene(
                 gene_type=gene_type,
                 value=new_value,
                 dominant=gene.dominant,
-                mutation_rate=gene.mutation_rate
+                mutation_rate=gene.mutation_rate,
             )
 
         # Generate evolved DNA hash
-        dna_data = json.dumps({
-            gene_type.value: gene.value
-            for gene_type, gene in evolved_genes.items()
-        }, sort_keys=True)
+        dna_data = json.dumps(
+            {gene_type.value: gene.value for gene_type, gene in evolved_genes.items()},
+            sort_keys=True,
+        )
         evolved_hash = "DNA_" + hashlib.sha256(dna_data.encode()).hexdigest()[:32]
 
         evolved_dna = ContentDNA(
@@ -409,7 +430,7 @@ class ContentDNAEngine:
             genes=evolved_genes,
             generation=original.generation,
             parent_hashes=[dna_hash],  # Track evolution lineage
-            mutation_history=original.mutation_history + mutations
+            mutation_history=original.mutation_history + mutations,
         )
 
         self._dna_registry[evolved_hash] = evolved_dna

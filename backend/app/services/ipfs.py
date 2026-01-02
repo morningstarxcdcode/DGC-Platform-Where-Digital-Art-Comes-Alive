@@ -6,12 +6,12 @@ from IPFS, including metadata JSON and generated content.
 """
 
 import asyncio
-from dataclasses import dataclass
-from typing import Optional, Dict, Any, Union
 import hashlib
 import json
 import logging
+from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, Dict, Optional, Union
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class IPFSUploadResult:
     """Result of an IPFS upload operation."""
+
     cid: str
     size: int
     pinned: bool
@@ -29,6 +30,7 @@ class IPFSUploadResult:
 @dataclass
 class IPFSContent:
     """Content retrieved from IPFS."""
+
     cid: str
     content: Union[bytes, str]
     content_type: str
@@ -69,9 +71,7 @@ class IPFSService:
         return "Qm" + hashlib.sha256(content).hexdigest()[:44]
 
     async def upload_content(
-        self,
-        content: Union[bytes, str],
-        pin: bool = True
+        self, content: Union[bytes, str], pin: bool = True
     ) -> IPFSUploadResult:
         """
         Upload content to IPFS.
@@ -90,7 +90,7 @@ class IPFSService:
 
         # Convert string to bytes if needed
         if isinstance(content, str):
-            content_bytes = content.encode('utf-8')
+            content_bytes = content.encode("utf-8")
         else:
             content_bytes = content
 
@@ -108,25 +108,16 @@ class IPFSService:
         self._metadata[cid] = {
             "size": len(content_bytes),
             "uploaded_at": int(datetime.now().timestamp()),
-            "pinned": pin
+            "pinned": pin,
         }
 
-        logger.info(
-            f"Uploaded to IPFS: CID={cid}, size={len(content_bytes)}"
-        )
+        logger.info(f"Uploaded to IPFS: CID={cid}, size={len(content_bytes)}")
 
         return IPFSUploadResult(
-            cid=cid,
-            size=len(content_bytes),
-            pinned=pin,
-            timestamp=int(datetime.now().timestamp())
+            cid=cid, size=len(content_bytes), pinned=pin, timestamp=int(datetime.now().timestamp())
         )
 
-    async def upload_json(
-        self,
-        data: Dict[str, Any],
-        pin: bool = True
-    ) -> IPFSUploadResult:
+    async def upload_json(self, data: Dict[str, Any], pin: bool = True) -> IPFSUploadResult:
         """
         Upload JSON metadata to IPFS.
 
@@ -168,32 +159,29 @@ class IPFSService:
         # Try to detect content type
         content_type = "application/octet-stream"
         try:
-            content_bytes.decode('utf-8')
+            content_bytes.decode("utf-8")
             content_type = "text/plain"
             # Check if it's JSON
             try:
-                json.loads(content_bytes.decode('utf-8'))
+                json.loads(content_bytes.decode("utf-8"))
                 content_type = "application/json"
             except json.JSONDecodeError:
                 pass
         except UnicodeDecodeError:
             # Binary content
-            if content_bytes.startswith(b'\x89PNG'):
+            if content_bytes.startswith(b"\x89PNG"):
                 content_type = "image/png"
-            elif content_bytes.startswith(b'\xff\xd8\xff'):
+            elif content_bytes.startswith(b"\xff\xd8\xff"):
                 content_type = "image/jpeg"
-            elif content_bytes.startswith(b'DGC_IMAGE'):
+            elif content_bytes.startswith(b"DGC_IMAGE"):
                 content_type = "image/png"
-            elif content_bytes.startswith(b'DGC_MUSIC'):
+            elif content_bytes.startswith(b"DGC_MUSIC"):
                 content_type = "audio/wav"
 
         logger.info(f"Retrieved from IPFS: CID={cid}")
 
         return IPFSContent(
-            cid=cid,
-            content=content_bytes,
-            content_type=content_type,
-            size=len(content_bytes)
+            cid=cid, content=content_bytes, content_type=content_type, size=len(content_bytes)
         )
 
     async def get_json(self, cid: str) -> Dict[str, Any]:
@@ -212,7 +200,7 @@ class IPFSService:
         content = await self.get_content(cid)
 
         if isinstance(content.content, bytes):
-            json_str = content.content.decode('utf-8')
+            json_str = content.content.decode("utf-8")
         else:
             json_str = content.content
 
@@ -296,9 +284,7 @@ class IPFSService:
         """
         return f"https://ipfs.io/ipfs/{cid}"
 
-    async def verify_content(
-        self, cid: str, expected_content: Union[bytes, str]
-    ) -> bool:
+    async def verify_content(self, cid: str, expected_content: Union[bytes, str]) -> bool:
         """
         Verify that stored content matches expected content.
 
@@ -317,7 +303,7 @@ class IPFSService:
             stored = await self.get_content(cid)
 
             if isinstance(expected_content, str):
-                expected_bytes = expected_content.encode('utf-8')
+                expected_bytes = expected_content.encode("utf-8")
             else:
                 expected_bytes = expected_content
 

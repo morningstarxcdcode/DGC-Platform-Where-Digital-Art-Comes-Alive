@@ -24,16 +24,9 @@ import base64
 import json
 import time
 from enum import Enum
-from typing import Dict, Any, Optional, List, Set
+from typing import Any, Dict, List, Optional, Set
 
-from fastapi import (
-    FastAPI,
-    HTTPException,
-    Query,
-    BackgroundTasks,
-    WebSocket,
-    WebSocketDisconnect
-)
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import Response
@@ -41,24 +34,23 @@ from pydantic import BaseModel, Field
 
 # Internal configuration and services
 from app.config import get_settings
+from app.services.agent_controller import (
+    AgentPreset,
+    AgentType,
+    ExecutionMode,
+    get_agent_controller,
+)
+from app.services.dna_engine import get_dna_engine
+from app.services.emotion_ai import EmotionType, get_emotion_ai
+from app.services.generation import ContentType as GenContentType
 from app.services.generation import (
     GenerationRequest,
     GenerationStatus,
-    ContentType as GenContentType,
-    get_generation_service
+    get_generation_service,
 )
 from app.services.ipfs import get_ipfs_service
-from app.services.dna_engine import get_dna_engine
-from app.services.emotion_ai import get_emotion_ai, EmotionType
+from app.services.search_engine import SearchCategory, get_search_engine
 from app.services.wallet_service import get_wallet_service
-from app.services.agent_controller import (
-    get_agent_controller,
-    AgentType,
-    ExecutionMode,
-    AgentPreset
-)
-from app.services.search_engine import get_search_engine, SearchCategory
-
 
 # Constants
 SEARCH_QUERY_DESC = "Search query"
@@ -89,8 +81,7 @@ app.add_middleware(
 # Additional security for production deployments
 if settings.is_production:
     app.add_middleware(
-        TrustedHostMiddleware,
-        allowed_hosts=["api.dgc-platform.com", "*.dgc-platform.com"]
+        TrustedHostMiddleware, allowed_hosts=["api.dgc-platform.com", "*.dgc-platform.com"]
     )
 
 
@@ -109,30 +100,11 @@ class ContentTypeEnum(str, Enum):
 class GenerateRequest(BaseModel):
     """Request model for content generation."""
 
-    prompt: str = Field(
-        ...,
-        min_length=1,
-        max_length=10000,
-        description="Generation prompt"
-    )
-    content_type: ContentTypeEnum = Field(
-        ...,
-        description="Type of content to generate"
-    )
-    creator_address: str = Field(
-        ...,
-        pattern="^0x[a-fA-F0-9]{40}$",
-        description="Ethereum address"
-    )
-    seed: Optional[int] = Field(
-        None,
-        ge=0,
-        description="Optional seed for reproducibility"
-    )
-    parameters: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Generation parameters"
-    )
+    prompt: str = Field(..., min_length=1, max_length=10000, description="Generation prompt")
+    content_type: ContentTypeEnum = Field(..., description="Type of content to generate")
+    creator_address: str = Field(..., pattern="^0x[a-fA-F0-9]{40}$", description="Ethereum address")
+    seed: Optional[int] = Field(None, ge=0, description="Optional seed for reproducibility")
+    parameters: Dict[str, Any] = Field(default_factory=dict, description="Generation parameters")
 
 
 class GenerateResponse(BaseModel):
@@ -153,14 +125,8 @@ class GenerateResponse(BaseModel):
 class UploadRequest(BaseModel):
     """Request model for content upload."""
 
-    content: str = Field(
-        ...,
-        description="Base64 encoded content or JSON string"
-    )
-    content_type: str = Field(
-        "application/octet-stream",
-        description="MIME type of content"
-    )
+    content: str = Field(..., description="Base64 encoded content or JSON string")
+    content_type: str = Field("application/octet-stream", description="MIME type of content")
     pin: bool = Field(True, description="Whether to pin content")
 
 
@@ -176,6 +142,7 @@ class UploadResponse(BaseModel):
 
 class NFTMetadata(BaseModel):
     """NFT metadata model."""
+
     model_config = {"protected_namespaces": ()}
 
     token_id: int
@@ -191,6 +158,7 @@ class NFTMetadata(BaseModel):
 
 class NFTListResponse(BaseModel):
     """Response model for NFT list."""
+
     nfts: List[NFTMetadata]
     total: int
     page: int
@@ -208,18 +176,14 @@ async def root():
         "message": "DGC Platform API",
         "version": "1.0.0",
         "environment": settings.environment,
-        "status": "healthy"
+        "status": "healthy",
     }
 
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {
-        "status": "healthy",
-        "environment": settings.environment,
-        "version": "1.0.0"
-    }
+    return {"status": "healthy", "environment": settings.environment, "version": "1.0.0"}
 
 
 @app.get("/api/health")
@@ -235,22 +199,16 @@ async def api_health_check():
             "dna_engine": "operational",
             "emotion_ai": "operational",
             "agents": "operational",
-            "search": "operational"
-        }
+            "search": "operational",
+        },
     }
 
 
 # ==================== Generation Endpoints ====================
 
-@app.post(
-    "/api/generate",
-    response_model=GenerateResponse,
-    tags=["Generation"]
-)
-async def generate_content(
-    request: GenerateRequest,
-    background_tasks: BackgroundTasks
-):
+
+@app.post("/api/generate", response_model=GenerateResponse, tags=["Generation"])
+async def generate_content(request: GenerateRequest, background_tasks: BackgroundTasks):
     """
     Trigger AI content generation.
 
@@ -267,7 +225,7 @@ async def generate_content(
             content_type=content_type,
             creator_address=request.creator_address,
             seed=request.seed,
-            parameters=request.parameters or {}
+            parameters=request.parameters or {},
         )
 
         # Generate content
@@ -281,7 +239,7 @@ async def generate_content(
             seed=result.seed,
             timestamp=result.timestamp,
             generation_time_ms=result.generation_time_ms,
-            error=result.error
+            error=result.error,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -290,11 +248,7 @@ async def generate_content(
         raise HTTPException(status_code=500, detail=msg)
 
 
-@app.get(
-    "/api/generate/{job_id}",
-    response_model=GenerateResponse,
-    tags=["Generation"]
-)
+@app.get("/api/generate/{job_id}", response_model=GenerateResponse, tags=["Generation"])
 async def get_generation_status(job_id: str):
     """
     Check generation job status.
@@ -315,7 +269,7 @@ async def get_generation_status(job_id: str):
         seed=result.seed,
         timestamp=result.timestamp,
         generation_time_ms=result.generation_time_ms,
-        error=result.error
+        error=result.error,
     )
 
 
@@ -341,13 +295,11 @@ async def get_generated_content(job_id: str):
     if isinstance(result.content, str):
         return Response(content=result.content, media_type="text/plain")
     else:
-        return Response(
-            content=result.content,
-            media_type="application/octet-stream"
-        )
+        return Response(content=result.content, media_type="application/octet-stream")
 
 
 # ==================== IPFS Endpoints ====================
+
 
 @app.post("/api/upload", response_model=UploadResponse, tags=["IPFS"])
 async def upload_content(request: UploadRequest):
@@ -363,7 +315,7 @@ async def upload_content(request: UploadRequest):
         try:
             content: bytes = base64.b64decode(request.content)
         except Exception:
-            content = request.content.encode('utf-8')
+            content = request.content.encode("utf-8")
 
         result = await ipfs.upload_content(content, pin=request.pin)
 
@@ -372,7 +324,7 @@ async def upload_content(request: UploadRequest):
             size=result.size,
             pinned=result.pinned,
             ipfs_url=ipfs.get_ipfs_url(result.cid),
-            gateway_url=ipfs.get_gateway_url(result.cid)
+            gateway_url=ipfs.get_gateway_url(result.cid),
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
@@ -389,10 +341,7 @@ async def get_content(cid: str):
         ipfs = get_ipfs_service()
         content = await ipfs.get_content(cid)
 
-        return Response(
-            content=content.content,
-            media_type=content.content_type
-        )
+        return Response(content=content.content, media_type=content.content_type)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -402,22 +351,15 @@ async def get_content(cid: str):
 
 # ==================== NFT Indexing Endpoints ====================
 
+
 @app.get("/api/nfts", response_model=NFTListResponse, tags=["NFTs"])
 async def list_nfts(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
-    content_type: Optional[ContentTypeEnum] = Query(
-        None, description="Filter by content type"
-    ),
-    creator: Optional[str] = Query(
-        None, description="Filter by creator address"
-    ),
-    min_price: Optional[float] = Query(
-        None, ge=0, description="Minimum price filter"
-    ),
-    max_price: Optional[float] = Query(
-        None, ge=0, description="Maximum price filter"
-    )
+    content_type: Optional[ContentTypeEnum] = Query(None, description="Filter by content type"),
+    creator: Optional[str] = Query(None, description="Filter by creator address"),
+    min_price: Optional[float] = Query(None, ge=0, description="Minimum price filter"),
+    max_price: Optional[float] = Query(None, ge=0, description="Maximum price filter"),
 ):
     """
     List NFTs with filters.
@@ -428,17 +370,11 @@ async def list_nfts(
     filtered = list(_nft_index.values())
 
     if content_type:
-        filtered = [
-            n for n in filtered
-            if n.content_type == content_type.value
-        ]
+        filtered = [n for n in filtered if n.content_type == content_type.value]
 
     if creator:
         creator_lower = creator.lower()
-        filtered = [
-            n for n in filtered
-            if n.creator_address.lower() == creator_lower
-        ]
+        filtered = [n for n in filtered if n.creator_address.lower() == creator_lower]
 
     # Pagination
     total = len(filtered)
@@ -446,12 +382,7 @@ async def list_nfts(
     end = start + page_size
     paginated = filtered[start:end]
 
-    return NFTListResponse(
-        nfts=paginated,
-        total=total,
-        page=page,
-        page_size=page_size
-    )
+    return NFTListResponse(nfts=paginated, total=total, page=page, page_size=page_size)
 
 
 @app.get("/api/nfts/{token_id}", response_model=NFTMetadata, tags=["NFTs"])
@@ -489,11 +420,12 @@ async def get_nft_provenance(token_id: int):
         "model_version": nft.model_version,
         "timestamp": nft.timestamp,
         "parents": [],  # Would be populated from blockchain
-        "children": []  # Would be populated from blockchain
+        "children": [],  # Would be populated from blockchain
     }
 
 
 # ==================== Index Management (Internal) ====================
+
 
 @app.post("/api/internal/index-nft", tags=["Internal"])
 async def index_nft(metadata: NFTMetadata):
@@ -516,6 +448,7 @@ async def remove_nft_index(token_id: int):
 
 # ==================== Marketplace Endpoints ====================
 
+
 class ListingType(str, Enum):
     FIXED = "FIXED"
     AUCTION = "AUCTION"
@@ -523,6 +456,7 @@ class ListingType(str, Enum):
 
 class MarketplaceListing(BaseModel):
     """Marketplace listing model."""
+
     token_id: int
     name: str
     description: str
@@ -540,6 +474,7 @@ class MarketplaceListing(BaseModel):
 
 class MarketplaceListResponse(BaseModel):
     """Response model for marketplace listings."""
+
     items: List[MarketplaceListing]
     total: int
     page: int
@@ -550,28 +485,16 @@ class MarketplaceListResponse(BaseModel):
 _marketplace_listings: Dict[int, MarketplaceListing] = {}
 
 
-@app.get(
-    "/api/marketplace/listings",
-    response_model=MarketplaceListResponse,
-    tags=["Marketplace"]
-)
+@app.get("/api/marketplace/listings", response_model=MarketplaceListResponse, tags=["Marketplace"])
 async def list_marketplace_items(
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
-    content_type: Optional[ContentTypeEnum] = Query(
-        None, description="Filter by content type"
-    ),
-    listing_type: Optional[ListingType] = Query(
-        None, description="Filter by listing type"
-    ),
-    min_price: Optional[str] = Query(
-        None, description="Minimum price in ETH"
-    ),
-    max_price: Optional[str] = Query(
-        None, description="Maximum price in ETH"
-    ),
+    content_type: Optional[ContentTypeEnum] = Query(None, description="Filter by content type"),
+    listing_type: Optional[ListingType] = Query(None, description="Filter by listing type"),
+    min_price: Optional[str] = Query(None, description="Minimum price in ETH"),
+    max_price: Optional[str] = Query(None, description="Maximum price in ETH"),
     sort: Optional[str] = Query("recent", description="Sort order"),
-    search: Optional[str] = Query(None, description=SEARCH_QUERY_DESC)
+    search: Optional[str] = Query(None, description=SEARCH_QUERY_DESC),
 ):
     """
     List marketplace items with filters.
@@ -582,37 +505,30 @@ async def list_marketplace_items(
     filtered = list(_marketplace_listings.values())
 
     if content_type:
-        filtered = [
-            listing for listing in filtered
-            if listing.content_type == content_type.value
-        ]
+        filtered = [listing for listing in filtered if listing.content_type == content_type.value]
 
     if listing_type:
-        filtered = [
-            listing for listing in filtered
-            if listing.listing_type == listing_type
-        ]
+        filtered = [listing for listing in filtered if listing.listing_type == listing_type]
 
     if min_price:
         min_val = float(min_price)
-        filtered = [
-            item for item in filtered if float(item.price) >= min_val
-        ]
+        filtered = [item for item in filtered if float(item.price) >= min_val]
 
     if max_price:
         max_val = float(max_price)
-        filtered = [
-            item for item in filtered if float(item.price) <= max_val
-        ]
+        filtered = [item for item in filtered if float(item.price) <= max_val]
 
     if search:
         search_lower = search.lower()
         filtered = [
-            listing for listing in filtered
-            if (search_lower in listing.name.lower() or
-                search_lower in listing.description.lower() or
-                search_lower in listing.creator.lower() or
-                search_lower in listing.seller.lower())
+            listing
+            for listing in filtered
+            if (
+                search_lower in listing.name.lower()
+                or search_lower in listing.description.lower()
+                or search_lower in listing.creator.lower()
+                or search_lower in listing.seller.lower()
+            )
         ]
 
     # Sort
@@ -630,12 +546,7 @@ async def list_marketplace_items(
     end = start + limit
     paginated = filtered[start:end]
 
-    return MarketplaceListResponse(
-        items=paginated,
-        total=total,
-        page=page,
-        totalPages=total_pages
-    )
+    return MarketplaceListResponse(items=paginated, total=total, page=page, totalPages=total_pages)
 
 
 @app.get("/api/marketplace/featured", tags=["Marketplace"])
@@ -656,7 +567,7 @@ async def get_featured_nfts():
             "name": listing.name,
             "imageUrl": listing.image_url,
             "creator": listing.creator,
-            "price": listing.price
+            "price": listing.price,
         }
         for listing in featured
     ]
@@ -674,26 +585,22 @@ async def get_platform_stats():
     unique_creators = len({n.creator_address for n in _nft_index.values()})
 
     # Calculate total volume (mock)
-    total_volume = sum(
-        float(item.price) for item in _marketplace_listings.values()
-    )
+    total_volume = sum(float(item.price) for item in _marketplace_listings.values())
 
     return {
         "totalNFTs": total_nfts,
         "totalListings": total_listings,
         "totalCreators": unique_creators,
-        "totalVolume": f"{total_volume:.2f}"
+        "totalVolume": f"{total_volume:.2f}",
     }
 
 
 # ==================== User Endpoints ====================
 
+
 @app.get("/api/users/{address}/nfts", tags=["Users"])
 async def get_user_nfts(
-    address: str,
-    type: str = Query(
-        "owned", description="Type: created, owned, listings, bids"
-    )
+    address: str, type: str = Query("owned", description="Type: created, owned, listings, bids")
 ):
     """
     Get user's NFTs.
@@ -704,10 +611,7 @@ async def get_user_nfts(
 
     # Helper function to get NFTs by creator address
     def get_creator_nfts():
-        return [
-            n for n in _nft_index.values()
-            if n.creator_address.lower() == address_lower
-        ]
+        return [n for n in _nft_index.values() if n.creator_address.lower() == address_lower]
 
     if type in ("created", "owned"):
         # Both created and owned return creator NFTs
@@ -715,7 +619,8 @@ async def get_user_nfts(
         nfts = get_creator_nfts()
     elif type == "listings":
         listings = [
-            listing for listing in _marketplace_listings.values()
+            listing
+            for listing in _marketplace_listings.values()
             if listing.seller.lower() == address_lower
         ]
         return {"items": listings}
@@ -729,7 +634,7 @@ async def get_user_nfts(
                 "name": n.name,
                 "imageUrl": n.image,
                 "contentType": n.content_type,
-                "isListed": n.token_id in _marketplace_listings
+                "isListed": n.token_id in _marketplace_listings,
             }
             for n in nfts
         ]
@@ -745,49 +650,48 @@ async def get_user_stats(address: str):
     """
     address_lower = address.lower()
 
-    created = len([
-        n for n in _nft_index.values()
-        if n.creator_address.lower() == address_lower
-    ])
+    created = len([n for n in _nft_index.values() if n.creator_address.lower() == address_lower])
     owned = created  # In production, check on-chain ownership
-    listings = len([
-        listing for listing in _marketplace_listings.values()
-        if listing.seller.lower() == address_lower
-    ])
+    listings = len(
+        [
+            listing
+            for listing in _marketplace_listings.values()
+            if listing.seller.lower() == address_lower
+        ]
+    )
 
     return {
         "totalCreated": created,
         "totalOwned": owned,
         "totalListings": listings,
         "totalSales": "0.00",
-        "totalRoyaltiesEarned": "0.00"
+        "totalRoyaltiesEarned": "0.00",
     }
 
 
 # ==================== Content DNA System™ Endpoints ====================
 
+
 class DNAGenerateRequest(BaseModel):
     """Request model for DNA generation."""
-    prompt: str = Field(
-        ..., min_length=1, max_length=10000, description="Generation prompt"
-    )
-    style: Optional[Dict[str, Any]] = Field(
-        default=None, description="Style parameters"
-    )
+
+    prompt: str = Field(..., min_length=1, max_length=10000, description="Generation prompt")
+    style: Optional[Dict[str, Any]] = Field(default=None, description="Style parameters")
 
 
 class DNABreedRequest(BaseModel):
     """Request model for DNA breeding."""
+
     parent1_hash: str = Field(..., description="DNA hash of first parent")
     parent2_hash: str = Field(..., description="DNA hash of second parent")
     mutation_boost: float = Field(
-        default=0.0, ge=0.0, le=1.0,
-        description="Additional mutation probability"
+        default=0.0, ge=0.0, le=1.0, description="Additional mutation probability"
     )
 
 
 class DNAEvolveRequest(BaseModel):
     """Request model for DNA evolution."""
+
     dna_hash: str = Field(..., description="DNA hash to evolve")
     environmental_factors: Optional[Dict[str, float]] = Field(
         default=None, description="Environmental factors"
@@ -810,7 +714,7 @@ async def generate_dna(request: DNAGenerateRequest):
             "genes": dna.to_dict()["genes"],
             "generation": dna.generation,
             "traits": dna.get_trait_string(),
-            "rarity_score": dna.calculate_rarity_score()
+            "rarity_score": dna.calculate_rarity_score(),
         }
     except Exception as e:
         msg = f"DNA generation failed: {str(e)}"
@@ -826,11 +730,7 @@ async def breed_dna(request: DNABreedRequest):
     """
     try:
         engine = get_dna_engine()
-        child = engine.breed_dna(
-            request.parent1_hash,
-            request.parent2_hash,
-            request.mutation_boost
-        )
+        child = engine.breed_dna(request.parent1_hash, request.parent2_hash, request.mutation_boost)
 
         return {
             "dna_hash": child.dna_hash,
@@ -839,7 +739,7 @@ async def breed_dna(request: DNABreedRequest):
             "parent_hashes": child.parent_hashes,
             "mutations": child.mutation_history,
             "traits": child.get_trait_string(),
-            "rarity_score": child.calculate_rarity_score()
+            "rarity_score": child.calculate_rarity_score(),
         }
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -857,9 +757,7 @@ async def evolve_dna(request: DNAEvolveRequest):
     """
     try:
         engine = get_dna_engine()
-        evolved = engine.evolve_dna(
-            request.dna_hash, request.environmental_factors
-        )
+        evolved = engine.evolve_dna(request.dna_hash, request.environmental_factors)
 
         return {
             "dna_hash": evolved.dna_hash,
@@ -868,7 +766,7 @@ async def evolve_dna(request: DNAEvolveRequest):
             "parent_hashes": evolved.parent_hashes,
             "mutations": evolved.mutation_history,
             "traits": evolved.get_trait_string(),
-            "rarity_score": evolved.calculate_rarity_score()
+            "rarity_score": evolved.calculate_rarity_score(),
         }
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -894,7 +792,7 @@ async def get_dna(dna_hash: str):
         "parent_hashes": dna.parent_hashes,
         "mutations": dna.mutation_history,
         "traits": dna.get_trait_string(),
-        "rarity_score": dna.calculate_rarity_score()
+        "rarity_score": dna.calculate_rarity_score(),
     }
 
 
@@ -916,35 +814,28 @@ async def check_compatibility(hash1: str, hash2: str):
         "parent1_hash": hash1,
         "parent2_hash": hash2,
         "compatibility_score": score,
-        "recommendation": recommendation
+        "recommendation": recommendation,
     }
 
 
 # ==================== Emotional Intelligence™ Endpoints ====================
 
+
 class EmotionAnalyzeRequest(BaseModel):
     """Request model for emotion analysis."""
+
     text: Optional[str] = Field(default=None, description="Text to analyze")
-    image_base64: Optional[str] = Field(
-        default=None, description="Base64 encoded image"
-    )
-    audio_base64: Optional[str] = Field(
-        default=None, description="Base64 encoded audio"
-    )
+    image_base64: Optional[str] = Field(default=None, description="Base64 encoded image")
+    audio_base64: Optional[str] = Field(default=None, description="Base64 encoded audio")
 
 
 class EmotionProfileRequest(BaseModel):
     """Request model for creating emotional profile."""
+
     content_id: str = Field(..., description="Content identifier")
-    base_mood: str = Field(
-        default="NEUTRAL", description="Base mood of content"
-    )
-    sensitivity: float = Field(
-        default=0.5, ge=0.0, le=1.0, description="Emotional sensitivity"
-    )
-    response_style: str = Field(
-        default="empathetic", description="Response style"
-    )
+    base_mood: str = Field(default="NEUTRAL", description="Base mood of content")
+    sensitivity: float = Field(default=0.5, ge=0.0, le=1.0, description="Emotional sensitivity")
+    response_style: str = Field(default="empathetic", description="Response style")
 
 
 @app.post("/api/emotion/analyze", tags=["Emotional AI"])
@@ -966,9 +857,7 @@ async def analyze_emotion(request: EmotionAnalyzeRequest):
             audio_data = base64.b64decode(request.audio_base64)
             state = ai.analyze_voice_emotion(audio_data)
         else:
-            raise HTTPException(
-                status_code=400, detail="Must provide text, image, or audio"
-            )
+            raise HTTPException(status_code=400, detail="Must provide text, image, or audio")
 
         return state.to_dict()
     except Exception as e:
@@ -977,9 +866,7 @@ async def analyze_emotion(request: EmotionAnalyzeRequest):
 
 
 @app.post("/api/emotion/adapt", tags=["Emotional AI"])
-async def get_adaptation(
-    request: EmotionAnalyzeRequest, content_id: Optional[str] = None
-):
+async def get_adaptation(request: EmotionAnalyzeRequest, content_id: Optional[str] = None):
     """
     Get content adaptation based on emotional state.
 
@@ -1007,7 +894,7 @@ async def get_adaptation(
         return {
             "emotion": state.to_dict(),
             "adaptation": adaptation.to_dict(),
-            "css_filters": adaptation.to_css_filters()
+            "css_filters": adaptation.to_css_filters(),
         }
     except Exception as e:
         msg = f"Adaptation generation failed: {str(e)}"
@@ -1033,7 +920,7 @@ async def create_emotion_profile(request: EmotionProfileRequest):
             content_id=request.content_id,
             base_mood=base_mood,
             sensitivity=request.sensitivity,
-            response_style=request.response_style
+            response_style=request.response_style,
         )
 
         return profile.to_dict()
@@ -1056,9 +943,7 @@ async def get_emotion_profile(content_id: str):
 
 
 @app.post("/api/emotion/record/{content_id}", tags=["Emotional AI"])
-async def record_emotion_interaction(
-    content_id: str, request: EmotionAnalyzeRequest
-):
+async def record_emotion_interaction(content_id: str, request: EmotionAnalyzeRequest):
     """Record an emotional interaction with content."""
     try:
         ai = get_emotion_ai()
@@ -1084,6 +969,7 @@ async def get_emotional_resonance(content_id: str):
 
 
 # ==================== Wallet Data Service Endpoints ====================
+
 
 @app.get("/api/wallet/{address}", tags=["Wallet"])
 async def get_wallet_data(address: str):
@@ -1114,7 +1000,7 @@ async def get_wallet_balance(address: str):
         return {
             "address": address,
             "eth_balance": wallet_data.eth_balance,
-            "eth_usd_value": wallet_data.eth_usd_value
+            "eth_usd_value": wallet_data.eth_usd_value,
         }
     except Exception as e:
         msg = f"Failed to fetch balance: {str(e)}"
@@ -1131,10 +1017,7 @@ async def get_wallet_tokens(address: str):
     try:
         service = get_wallet_service()
         wallet_data = await service.get_wallet_data(address)
-        return {
-            "address": address,
-            "tokens": [t.to_dict() for t in wallet_data.tokens]
-        }
+        return {"address": address, "tokens": [t.to_dict() for t in wallet_data.tokens]}
     except Exception as e:
         msg = f"Failed to fetch tokens: {str(e)}"
         raise HTTPException(status_code=500, detail=msg)
@@ -1150,19 +1033,14 @@ async def get_wallet_nfts(address: str):
     try:
         service = get_wallet_service()
         wallet_data = await service.get_wallet_data(address)
-        return {
-            "address": address,
-            "nfts": [n.to_dict() for n in wallet_data.nfts]
-        }
+        return {"address": address, "nfts": [n.to_dict() for n in wallet_data.nfts]}
     except Exception as e:
         msg = f"Failed to fetch NFTs: {str(e)}"
         raise HTTPException(status_code=500, detail=msg)
 
 
 @app.get("/api/wallet/{address}/transactions", tags=["Wallet"])
-async def get_wallet_transactions(
-    address: str, limit: int = Query(10, ge=1, le=100)
-):
+async def get_wallet_transactions(address: str, limit: int = Query(10, ge=1, le=100)):
     """
     Get recent transactions for an address.
 
@@ -1173,9 +1051,7 @@ async def get_wallet_transactions(
         wallet_data = await service.get_wallet_data(address)
         return {
             "address": address,
-            "transactions": [
-                t.to_dict() for t in wallet_data.transactions[:limit]
-            ]
+            "transactions": [t.to_dict() for t in wallet_data.transactions[:limit]],
         }
     except Exception as e:
         msg = f"Failed to fetch transactions: {str(e)}"
@@ -1200,22 +1076,20 @@ async def get_gas_price():
 
 # ==================== Multi-Agent AI Controller Endpoints ====================
 
+
 class AgentExecuteRequest(BaseModel):
     """Request model for agent execution."""
+
     agent_types: Optional[List[str]] = Field(
         default=None, description="List of agent types to execute"
     )
-    input_data: Dict[str, Any] = Field(
-        default_factory=dict, description="Input data for agents"
-    )
-    mode: str = Field(
-        default="CUSTOM",
-        description="Execution mode: SINGLE, ALL, CUSTOM, CHAIN"
-    )
+    input_data: Dict[str, Any] = Field(default_factory=dict, description="Input data for agents")
+    mode: str = Field(default="CUSTOM", description="Execution mode: SINGLE, ALL, CUSTOM, CHAIN")
 
 
 class PresetCreateRequest(BaseModel):
     """Request model for creating agent preset."""
+
     name: str = Field(..., min_length=1, max_length=100)
     description: str = Field(default="")
     enabled_agents: List[str]
@@ -1249,29 +1123,16 @@ async def execute_agents(request: AgentExecuteRequest):
         if mode == ExecutionMode.ALL:
             result = await controller.execute_all(request.input_data)
         elif mode == ExecutionMode.CHAIN and request.agent_types:
-            agent_types = [
-                AgentType[t.upper()] for t in request.agent_types
-            ]
-            result = await controller.execute_chain(
-                agent_types, request.input_data
-            )
+            agent_types = [AgentType[t.upper()] for t in request.agent_types]
+            result = await controller.execute_chain(agent_types, request.input_data)
         elif request.agent_types:
-            agent_types = [
-                AgentType[t.upper()] for t in request.agent_types
-            ]
+            agent_types = [AgentType[t.upper()] for t in request.agent_types]
             if len(agent_types) == 1:
-                result = await controller.execute_single(
-                    agent_types[0], request.input_data
-                )
+                result = await controller.execute_single(agent_types[0], request.input_data)
             else:
-                result = await controller.execute_custom(
-                    agent_types, request.input_data
-                )
+                result = await controller.execute_custom(agent_types, request.input_data)
         else:
-            raise HTTPException(
-                status_code=400,
-                detail="Must specify agent_types or use mode=ALL"
-            )
+            raise HTTPException(status_code=400, detail="Must specify agent_types or use mode=ALL")
 
         return result.to_dict()
     except KeyError as e:
@@ -1283,10 +1144,7 @@ async def execute_agents(request: AgentExecuteRequest):
 
 
 @app.post("/api/agents/execute/{agent_type}", tags=["Agents"])
-async def execute_single_agent(
-    agent_type: str,
-    input_data: Optional[Dict[str, Any]] = None
-):
+async def execute_single_agent(agent_type: str, input_data: Optional[Dict[str, Any]] = None):
     """
     Execute a single AI agent.
 
@@ -1356,21 +1214,15 @@ async def create_preset(request: PresetCreateRequest):
     Validates: Requirements 14.8, 16.4
     """
     import uuid
+
     try:
         controller = get_agent_controller()
 
-        enabled_agents = [
-            AgentType[t.upper()] for t in request.enabled_agents
-        ]
-        parameters = {
-            AgentType[k.upper()]: v
-            for k, v in request.parameters.items()
-        }
+        enabled_agents = [AgentType[t.upper()] for t in request.enabled_agents]
+        parameters = {AgentType[k.upper()]: v for k, v in request.parameters.items()}
         chain_config = None
         if request.chain_config:
-            chain_config = [
-                AgentType[t.upper()] for t in request.chain_config
-            ]
+            chain_config = [AgentType[t.upper()] for t in request.chain_config]
 
         preset = AgentPreset(
             id=str(uuid.uuid4()),
@@ -1378,7 +1230,7 @@ async def create_preset(request: PresetCreateRequest):
             description=request.description,
             enabled_agents=enabled_agents,
             parameters=parameters,
-            chain_config=chain_config
+            chain_config=chain_config,
         )
 
         preset_id = controller.save_preset(preset)
@@ -1427,10 +1279,7 @@ class ConnectionManager:
         self.wallet_subscriptions: Dict[str, Set[WebSocket]] = {}
 
     async def connect(
-        self,
-        websocket: WebSocket,
-        connection_type: str,
-        identifier: Optional[str] = None
+        self, websocket: WebSocket, connection_type: str, identifier: Optional[str] = None
     ):
         await websocket.accept()
 
@@ -1444,10 +1293,7 @@ class ConnectionManager:
             self.wallet_subscriptions[identifier].add(websocket)
 
     def disconnect(
-        self,
-        websocket: WebSocket,
-        connection_type: str,
-        identifier: Optional[str] = None
+        self, websocket: WebSocket, connection_type: str, identifier: Optional[str] = None
     ):
         if connection_type in self.active_connections:
             self.active_connections[connection_type].discard(websocket)
@@ -1513,13 +1359,15 @@ async def websocket_wallet_endpoint(websocket: WebSocket, address: str):
 
             # Echo back for connection testing
             await manager.send_personal_message(
-                json.dumps({
-                    "type": "connection_status",
-                    "status": "connected",
-                    "address": address,
-                    "timestamp": int(time.time())
-                }),
-                websocket
+                json.dumps(
+                    {
+                        "type": "connection_status",
+                        "status": "connected",
+                        "address": address,
+                        "timestamp": int(time.time()),
+                    }
+                ),
+                websocket,
             )
     except WebSocketDisconnect:
         manager.disconnect(websocket, "wallet", address.lower())
@@ -1546,11 +1394,7 @@ async def websocket_agents_endpoint(websocket: WebSocket):
                 message = json.loads(raw_data)
                 if message.get("type") == "ping":
                     await manager.send_personal_message(
-                        json.dumps({
-                            "type": "pong",
-                            "timestamp": int(time.time())
-                        }),
-                        websocket
+                        json.dumps({"type": "pong", "timestamp": int(time.time())}), websocket
                     )
             except Exception:
                 pass
@@ -1575,12 +1419,10 @@ async def websocket_search_endpoint(websocket: WebSocket):
 
             # Handle search-related messages
             await manager.send_personal_message(
-                json.dumps({
-                    "type": "search_status",
-                    "status": "connected",
-                    "timestamp": int(time.time())
-                }),
-                websocket
+                json.dumps(
+                    {"type": "search_status", "status": "connected", "timestamp": int(time.time())}
+                ),
+                websocket,
             )
     except WebSocketDisconnect:
         manager.disconnect(websocket, "search")
@@ -1600,25 +1442,21 @@ async def broadcast_real_time_updates():
                     "slow": 20 + (time.time() % 10),
                     "standard": 35 + (time.time() % 15),
                     "fast": 50 + (time.time() % 20),
-                    "instant": 70 + (time.time() % 25)
+                    "instant": 70 + (time.time() % 25),
                 },
-                "timestamp": int(time.time())
+                "timestamp": int(time.time()),
             }
 
-            await manager.broadcast_to_type(
-                json.dumps(gas_update), "wallet"
-            )
+            await manager.broadcast_to_type(json.dumps(gas_update), "wallet")
 
             # Simulate market data updates
             market_update = {
                 "type": "market_update",
                 "eth_price": 2000 + (time.time() % 100),
-                "timestamp": int(time.time())
+                "timestamp": int(time.time()),
             }
 
-            await manager.broadcast_to_type(
-                json.dumps(market_update), "wallet"
-            )
+            await manager.broadcast_to_type(json.dumps(market_update), "wallet")
 
             await asyncio.sleep(30)  # Update every 30 seconds
 
@@ -1664,27 +1502,29 @@ async def get_system_status():
             "emotion_ai": "operational",
             "agents": "operational",
             "search": "operational",
-            "websockets": "operational"
+            "websockets": "operational",
         },
         "connections": {
             "wallet_connections": wallet_count,
             "agent_connections": agent_count,
             "search_connections": search_count,
-            "total_connections": total_count
+            "total_connections": total_count,
         },
         "performance": {
             "avg_response_time": "45ms",
             "uptime": "99.9%",
             "memory_usage": "256MB",
-            "cpu_usage": "12%"
-        }
+            "cpu_usage": "12%",
+        },
     }
+
 
 # ==================== Blockchain Search Endpoints ====================
 
 
 class SearchRequest(BaseModel):
     """Request model for blockchain search."""
+
     query: str = Field(..., min_length=1)
     categories: Optional[List[str]] = None
     filters: Optional[Dict[str, Any]] = None
@@ -1695,7 +1535,7 @@ class SearchRequest(BaseModel):
 @app.get("/api/search/autocomplete", tags=["Search"])
 async def search_autocomplete(
     q: str = Query(..., min_length=1, description=SEARCH_QUERY_DESC),
-    limit: int = Query(10, ge=1, le=20, description="Max suggestions")
+    limit: int = Query(10, ge=1, le=20, description="Max suggestions"),
 ):
     """
     Get autocomplete suggestions for a search query.
@@ -1723,16 +1563,14 @@ async def search_blockchain(request: SearchRequest):
 
         categories = None
         if request.categories:
-            categories = [
-                SearchCategory[c.upper()] for c in request.categories
-            ]
+            categories = [SearchCategory[c.upper()] for c in request.categories]
 
         result = await engine.search(
             query=request.query,
             categories=categories or [],
             filters=request.filters or {},
             limit=request.limit,
-            offset=request.offset
+            offset=request.offset,
         )
 
         return result.to_dict()
@@ -1747,7 +1585,7 @@ async def search_blockchain(request: SearchRequest):
 async def search_blockchain_get(
     q: str = Query(..., min_length=1, description=SEARCH_QUERY_DESC),
     category: Optional[str] = Query(None, description="Filter by category"),
-    limit: int = Query(20, ge=1, le=100)
+    limit: int = Query(20, ge=1, le=100),
 ):
     """
     Search blockchain data (GET version).
@@ -1758,11 +1596,7 @@ async def search_blockchain_get(
         engine = get_search_engine()
 
         categories = [SearchCategory[category.upper()]] if category else []
-        result = await engine.search(
-            query=q,
-            categories=categories,
-            limit=limit
-        )
+        result = await engine.search(query=q, categories=categories, limit=limit)
 
         return result.to_dict()
     except KeyError as e:

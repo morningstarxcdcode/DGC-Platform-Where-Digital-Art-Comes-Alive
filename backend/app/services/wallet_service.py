@@ -8,13 +8,14 @@ Validates: Requirements 13.1, 13.2, 13.3, 13.4, 13.5
 """
 
 import asyncio
-import logging
-import aiohttp
 import json
+import logging
 from dataclasses import dataclass, field
-from typing import Dict, Any, Optional, List, Callable
 from datetime import datetime
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
+
+import aiohttp
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 class TransactionStatus(Enum):
     """Transaction status types."""
+
     PENDING = "pending"
     CONFIRMED = "success"
     FAILED = "failed"
@@ -30,6 +32,7 @@ class TransactionStatus(Enum):
 @dataclass
 class TokenBalance:
     """ERC-20 token balance."""
+
     contract_address: str
     symbol: str
     name: str
@@ -44,13 +47,14 @@ class TokenBalance:
             "name": self.name,
             "balance": self.balance,
             "decimals": self.decimals,
-            "usd_value": self.usd_value
+            "usd_value": self.usd_value,
         }
 
 
 @dataclass
 class NFTHolding:
     """NFT holding information."""
+
     contract_address: str
     token_id: int
     name: str
@@ -65,13 +69,14 @@ class NFTHolding:
             "name": self.name,
             "tokenURI": self.tokenURI,
             "collection": self.collection,
-            "floor_price": self.floor_price
+            "floor_price": self.floor_price,
         }
 
 
 @dataclass
 class Transaction:
     """Transaction information."""
+
     hash: str
     from_address: str
     to_address: str
@@ -94,13 +99,14 @@ class Transaction:
             "status": self.status.value,
             "blockNumber": self.block_number,
             "timestamp": self.timestamp,
-            "type": "sent" if hasattr(self, '_is_outgoing') and self._is_outgoing else "received"
+            "type": "sent" if hasattr(self, "_is_outgoing") and self._is_outgoing else "received",
         }
 
 
 @dataclass
 class GasPrice:
     """Gas price estimates."""
+
     slow: int  # Gwei
     standard: int
     fast: int
@@ -115,13 +121,14 @@ class GasPrice:
             "fast": self.fast,
             "instant": self.instant,
             "base_fee": self.base_fee,
-            "timestamp": self.timestamp
+            "timestamp": self.timestamp,
         }
 
 
 @dataclass
 class WalletData:
     """Complete wallet data snapshot."""
+
     address: str
     eth_balance: str
     eth_usd_value: Optional[float] = None
@@ -129,9 +136,7 @@ class WalletData:
     nfts: List[NFTHolding] = field(default_factory=list)
     transactions: List[Transaction] = field(default_factory=list)
     gas_price: Optional[GasPrice] = None
-    last_updated: int = field(
-        default_factory=lambda: int(datetime.now().timestamp())
-    )
+    last_updated: int = field(default_factory=lambda: int(datetime.now().timestamp()))
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -142,7 +147,7 @@ class WalletData:
             "nfts": [n.to_dict() for n in self.nfts],
             "transactions": [t.to_dict() for t in self.transactions],
             "gas_price": self.gas_price.to_dict() if self.gas_price else None,
-            "last_updated": self.last_updated
+            "last_updated": self.last_updated,
         }
 
 
@@ -201,7 +206,12 @@ class WalletDataService:
             eth_price_task = self._get_eth_price()
 
             eth_balance, tokens, nfts, transactions, gas_price, eth_price = await asyncio.gather(
-                eth_balance_task, tokens_task, nfts_task, transactions_task, gas_price_task, eth_price_task
+                eth_balance_task,
+                tokens_task,
+                nfts_task,
+                transactions_task,
+                gas_price_task,
+                eth_price_task,
             )
 
             eth_usd = float(eth_balance) * eth_price if eth_price else None
@@ -214,7 +224,7 @@ class WalletDataService:
                 nfts=nfts,
                 transactions=transactions,
                 gas_price=gas_price,
-                last_updated=int(datetime.now().timestamp())
+                last_updated=int(datetime.now().timestamp()),
             )
         except Exception as e:
             logger.error(f"Error fetching wallet data for {address}: {e}")
@@ -227,13 +237,13 @@ class WalletDataService:
                 nfts=[],
                 transactions=[],
                 gas_price=await self.get_gas_price(),
-                last_updated=int(datetime.now().timestamp())
+                last_updated=int(datetime.now().timestamp()),
             )
 
     async def _get_eth_price(self) -> float:
         """Get current ETH price in USD."""
         now = int(datetime.now().timestamp())
-        
+
         # Return cached if fresh (less than 5 minutes old)
         if self._eth_price_cache and (now - self._eth_price_updated) < 300:
             return self._eth_price_cache
@@ -241,18 +251,18 @@ class WalletDataService:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(
-                    'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd',
-                    timeout=aiohttp.ClientTimeout(total=10)
+                    "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd",
+                    timeout=aiohttp.ClientTimeout(total=10),
                 ) as response:
                     if response.status == 200:
                         data = await response.json()
-                        price = data.get('ethereum', {}).get('usd', 2500.0)
+                        price = data.get("ethereum", {}).get("usd", 2500.0)
                         self._eth_price_cache = float(price)
                         self._eth_price_updated = now
                         return self._eth_price_cache
         except Exception as e:
             logger.error(f"Error fetching ETH price: {e}")
-        
+
         # Return cached or default
         return self._eth_price_cache or 2500.0
 
@@ -265,23 +275,21 @@ class WalletDataService:
                     "jsonrpc": "2.0",
                     "method": "eth_getBalance",
                     "params": [address, "latest"],
-                    "id": 1
+                    "id": 1,
                 }
                 async with session.post(
-                    self._rpc_url,
-                    json=payload,
-                    timeout=aiohttp.ClientTimeout(total=10)
+                    self._rpc_url, json=payload, timeout=aiohttp.ClientTimeout(total=10)
                 ) as response:
                     if response.status == 200:
                         data = await response.json()
-                        if 'result' in data:
+                        if "result" in data:
                             # Convert from wei to ether
-                            balance_wei = int(data['result'], 16)
+                            balance_wei = int(data["result"], 16)
                             balance_eth = balance_wei / 10**18
                             return f"{balance_eth:.6f}"
         except Exception as e:
             logger.error(f"Error fetching ETH balance for {address}: {e}")
-        
+
         # Return mock balance for demonstration
         mock_balance = str(1.0 + (int(address[-4:], 16) % 100) / 100)
         return mock_balance
@@ -297,36 +305,44 @@ class WalletDataService:
                     "address": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
                     "symbol": "DAI",
                     "name": "Dai Stablecoin",
-                    "decimals": 18
+                    "decimals": 18,
                 },
                 {
                     "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-                    "symbol": "USDC", 
+                    "symbol": "USDC",
                     "name": "USD Coin",
-                    "decimals": 6
+                    "decimals": 6,
                 },
                 {
                     "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
                     "symbol": "USDT",
                     "name": "Tether USD",
-                    "decimals": 6
-                }
+                    "decimals": 6,
+                },
             ]
 
             tokens = []
             for token in common_tokens:
                 try:
                     # Try to get token balance via JSON-RPC
-                    balance = await self._get_token_balance(address, token["address"], token["decimals"])
+                    balance = await self._get_token_balance(
+                        address, token["address"], token["decimals"]
+                    )
                     if float(balance) > 0:
-                        tokens.append(TokenBalance(
-                            contract_address=token["address"],
-                            symbol=token["symbol"],
-                            name=token["name"],
-                            balance=balance,
-                            decimals=token["decimals"],
-                            usd_value=float(balance) if token["symbol"] in ["DAI", "USDC", "USDT"] else None
-                        ))
+                        tokens.append(
+                            TokenBalance(
+                                contract_address=token["address"],
+                                symbol=token["symbol"],
+                                name=token["name"],
+                                balance=balance,
+                                decimals=token["decimals"],
+                                usd_value=(
+                                    float(balance)
+                                    if token["symbol"] in ["DAI", "USDC", "USDT"]
+                                    else None
+                                ),
+                            )
+                        )
                 except Exception as e:
                     logger.error(f"Error fetching {token['symbol']} balance: {e}")
                     continue
@@ -348,26 +364,21 @@ class WalletDataService:
                 payload = {
                     "jsonrpc": "2.0",
                     "method": "eth_call",
-                    "params": [{
-                        "to": token_address,
-                        "data": data
-                    }, "latest"],
-                    "id": 1
+                    "params": [{"to": token_address, "data": data}, "latest"],
+                    "id": 1,
                 }
                 async with session.post(
-                    self._rpc_url,
-                    json=payload,
-                    timeout=aiohttp.ClientTimeout(total=10)
+                    self._rpc_url, json=payload, timeout=aiohttp.ClientTimeout(total=10)
                 ) as response:
                     if response.status == 200:
                         data = await response.json()
-                        if 'result' in data and data['result'] != '0x':
-                            balance_wei = int(data['result'], 16)
-                            balance = balance_wei / (10 ** decimals)
+                        if "result" in data and data["result"] != "0x":
+                            balance_wei = int(data["result"], 16)
+                            balance = balance_wei / (10**decimals)
                             return f"{balance:.6f}"
         except Exception as e:
             logger.error(f"Error fetching token balance: {e}")
-        
+
         return "0.0"
 
     async def _get_nft_holdings(self, address: str) -> List[NFTHolding]:
@@ -378,55 +389,48 @@ class WalletDataService:
             # Mock NFT based on address for demonstration
             nft_count = (int(address[-6:], 16) % 3) + 1  # 1-3 NFTs
             nfts = []
-            
+
             for i in range(nft_count):
-                nfts.append(NFTHolding(
-                    contract_address="0x1234567890123456789012345678901234567890",
-                    token_id=i + 1,
-                    name=f"DGC Living NFT #{i + 1}",
-                    tokenURI=f"https://example.com/nft{i + 1}.png",
-                    collection="DGC Living NFTs"
-                ))
-            
+                nfts.append(
+                    NFTHolding(
+                        contract_address="0x1234567890123456789012345678901234567890",
+                        token_id=i + 1,
+                        name=f"DGC Living NFT #{i + 1}",
+                        tokenURI=f"https://example.com/nft{i + 1}.png",
+                        collection="DGC Living NFTs",
+                    )
+                )
+
             return nfts
         except Exception as e:
             logger.error(f"Error fetching NFT holdings: {e}")
             return []
 
-    async def _get_recent_transactions(
-        self, address: str, limit: int = 20
-    ) -> List[Transaction]:
+    async def _get_recent_transactions(self, address: str, limit: int = 20) -> List[Transaction]:
         """Get recent transactions for address."""
         try:
             # Try to get recent transactions from the blockchain
             # This is a simplified approach - in production you'd use an indexer
             transactions = []
-            
+
             # Get current block number
             async with aiohttp.ClientSession() as session:
-                payload = {
-                    "jsonrpc": "2.0",
-                    "method": "eth_blockNumber",
-                    "params": [],
-                    "id": 1
-                }
+                payload = {"jsonrpc": "2.0", "method": "eth_blockNumber", "params": [], "id": 1}
                 async with session.post(
-                    self._rpc_url,
-                    json=payload,
-                    timeout=aiohttp.ClientTimeout(total=10)
+                    self._rpc_url, json=payload, timeout=aiohttp.ClientTimeout(total=10)
                 ) as response:
                     if response.status == 200:
                         data = await response.json()
-                        if 'result' in data:
-                            current_block = int(data['result'], 16)
-                            
+                        if "result" in data:
+                            current_block = int(data["result"], 16)
+
                             # Check last 10 blocks for transactions
                             for block_num in range(max(0, current_block - 10), current_block + 1):
                                 block_txs = await self._get_block_transactions(address, block_num)
                                 transactions.extend(block_txs)
                                 if len(transactions) >= limit:
                                     break
-            
+
             return transactions[:limit]
         except Exception as e:
             logger.error(f"Error fetching transactions: {e}")
@@ -441,48 +445,48 @@ class WalletDataService:
                     "jsonrpc": "2.0",
                     "method": "eth_getBlockByNumber",
                     "params": [hex(block_number), True],
-                    "id": 1
+                    "id": 1,
                 }
                 async with session.post(
-                    self._rpc_url,
-                    json=payload,
-                    timeout=aiohttp.ClientTimeout(total=10)
+                    self._rpc_url, json=payload, timeout=aiohttp.ClientTimeout(total=10)
                 ) as response:
                     if response.status == 200:
                         data = await response.json()
-                        if 'result' in data and data['result']:
-                            block = data['result']
+                        if "result" in data and data["result"]:
+                            block = data["result"]
                             transactions = []
-                            
-                            for tx in block.get('transactions', []):
-                                if (tx.get('from', '').lower() == address.lower() or 
-                                    tx.get('to', '').lower() == address.lower()):
-                                    
+
+                            for tx in block.get("transactions", []):
+                                if (
+                                    tx.get("from", "").lower() == address.lower()
+                                    or tx.get("to", "").lower() == address.lower()
+                                ):
+
                                     # Get transaction receipt for status
-                                    status = await self._get_transaction_status(tx['hash'])
-                                    
-                                    value_wei = int(tx.get('value', '0x0'), 16)
+                                    status = await self._get_transaction_status(tx["hash"])
+
+                                    value_wei = int(tx.get("value", "0x0"), 16)
                                     value_eth = value_wei / 10**18
-                                    
-                                    gas_price_wei = int(tx.get('gasPrice', '0x0'), 16)
+
+                                    gas_price_wei = int(tx.get("gasPrice", "0x0"), 16)
                                     gas_price_gwei = gas_price_wei / 10**9
-                                    
+
                                     transaction = Transaction(
-                                        hash=tx['hash'],
-                                        from_address=tx.get('from', ''),
-                                        to_address=tx.get('to', ''),
+                                        hash=tx["hash"],
+                                        from_address=tx.get("from", ""),
+                                        to_address=tx.get("to", ""),
                                         value=f"{value_eth:.6f}",
                                         gas_price=f"{gas_price_gwei:.1f}",
                                         status=status,
-                                        block_number=int(tx.get('blockNumber', '0x0'), 16),
-                                        timestamp=int(block.get('timestamp', '0x0'), 16)
+                                        block_number=int(tx.get("blockNumber", "0x0"), 16),
+                                        timestamp=int(block.get("timestamp", "0x0"), 16),
                                     )
                                     transactions.append(transaction)
-                            
+
                             return transactions
         except Exception as e:
             logger.error(f"Error fetching block transactions: {e}")
-        
+
         return []
 
     async def _get_transaction_status(self, tx_hash: str) -> TransactionStatus:
@@ -493,22 +497,24 @@ class WalletDataService:
                     "jsonrpc": "2.0",
                     "method": "eth_getTransactionReceipt",
                     "params": [tx_hash],
-                    "id": 1
+                    "id": 1,
                 }
                 async with session.post(
-                    self._rpc_url,
-                    json=payload,
-                    timeout=aiohttp.ClientTimeout(total=10)
+                    self._rpc_url, json=payload, timeout=aiohttp.ClientTimeout(total=10)
                 ) as response:
                     if response.status == 200:
                         data = await response.json()
-                        if 'result' in data and data['result']:
-                            receipt = data['result']
-                            status_hex = receipt.get('status', '0x0')
-                            return TransactionStatus.CONFIRMED if status_hex == '0x1' else TransactionStatus.FAILED
+                        if "result" in data and data["result"]:
+                            receipt = data["result"]
+                            status_hex = receipt.get("status", "0x0")
+                            return (
+                                TransactionStatus.CONFIRMED
+                                if status_hex == "0x1"
+                                else TransactionStatus.FAILED
+                            )
         except Exception as e:
             logger.error(f"Error fetching transaction status: {e}")
-        
+
         return TransactionStatus.PENDING
 
     def _get_mock_transactions(self, address: str, limit: int) -> List[Transaction]:
@@ -516,19 +522,23 @@ class WalletDataService:
         tx_count = min(limit, 5)
         now = int(datetime.now().timestamp())
         transactions = []
-        
+
         for i in range(tx_count):
             transactions.append(
                 Transaction(
                     hash=f"0xabc{i:03d}{'0' * 60}",
-                    from_address=address if i % 2 == 0 else "0x9876543210987654321098765432109876543210",
-                    to_address="0x9876543210987654321098765432109876543210" if i % 2 == 0 else address,
+                    from_address=(
+                        address if i % 2 == 0 else "0x9876543210987654321098765432109876543210"
+                    ),
+                    to_address=(
+                        "0x9876543210987654321098765432109876543210" if i % 2 == 0 else address
+                    ),
                     value=str(0.1 * (i + 1)),
                     gas_price="20.0",
                     gas_used=21000,
                     status=TransactionStatus.CONFIRMED,
                     block_number=12345678 + i,
-                    timestamp=now - (3600 * (i + 1))
+                    timestamp=now - (3600 * (i + 1)),
                 )
             )
         return transactions
@@ -548,30 +558,23 @@ class WalletDataService:
         try:
             # Try to get real gas price
             async with aiohttp.ClientSession() as session:
-                payload = {
-                    "jsonrpc": "2.0",
-                    "method": "eth_gasPrice",
-                    "params": [],
-                    "id": 1
-                }
+                payload = {"jsonrpc": "2.0", "method": "eth_gasPrice", "params": [], "id": 1}
                 async with session.post(
-                    self._rpc_url,
-                    json=payload,
-                    timeout=aiohttp.ClientTimeout(total=10)
+                    self._rpc_url, json=payload, timeout=aiohttp.ClientTimeout(total=10)
                 ) as response:
                     if response.status == 200:
                         data = await response.json()
-                        if 'result' in data:
-                            gas_price_wei = int(data['result'], 16)
+                        if "result" in data:
+                            gas_price_wei = int(data["result"], 16)
                             base_fee = int(gas_price_wei / 10**9)  # Convert to Gwei
-                            
+
                             self._gas_price_cache = GasPrice(
                                 slow=max(1, base_fee - 2),
                                 standard=base_fee,
                                 fast=base_fee + 5,
                                 instant=base_fee + 15,
                                 base_fee=base_fee,
-                                timestamp=now
+                                timestamp=now,
                             )
                             self._gas_price_updated = now
                             return self._gas_price_cache
@@ -586,13 +589,15 @@ class WalletDataService:
             fast=base_fee + 10,
             instant=base_fee + 25,
             base_fee=base_fee,
-            timestamp=now
+            timestamp=now,
         )
         self._gas_price_updated = now
 
         return self._gas_price_cache
 
-    async def track_transaction(self, tx_hash: str, callback: Optional[Callable] = None) -> Transaction:
+    async def track_transaction(
+        self, tx_hash: str, callback: Optional[Callable] = None
+    ) -> Transaction:
         """
         Track a transaction until confirmation.
 
@@ -609,7 +614,7 @@ class WalletDataService:
             value="0",
             gas_price="20",
             status=TransactionStatus.PENDING,
-            timestamp=int(datetime.now().timestamp())
+            timestamp=int(datetime.now().timestamp()),
         )
 
         # Simulate waiting for confirmation

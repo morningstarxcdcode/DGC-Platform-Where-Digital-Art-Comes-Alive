@@ -4,6 +4,7 @@ Configuration management for the DGC backend service.
 
 import os
 from typing import List, Optional
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -12,10 +13,7 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=False,
-        extra="ignore"
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
     )
 
     # Environment
@@ -29,13 +27,13 @@ class Settings(BaseSettings):
     api_workers: int = Field(default=1, description="Number of API workers")
     cors_origins: List[str] = Field(
         default=["http://localhost:3000", "http://localhost:5173"],
-        description="CORS allowed origins"
+        description="CORS allowed origins",
     )
 
     # Database
     database_url: str = Field(
         default="postgresql+asyncpg://user:password@localhost:5432/dgc_platform",
-        description="Database connection URL"
+        description="Database connection URL",
     )
     database_pool_size: int = Field(default=10, description="Database connection pool size")
     database_max_overflow: int = Field(default=20, description="Database max overflow connections")
@@ -46,23 +44,23 @@ class Settings(BaseSettings):
     # IPFS Configuration
     ipfs_api_url: str = Field(default="http://localhost:5001", description="IPFS API URL")
     ipfs_gateway_url: str = Field(default="http://localhost:8080", description="IPFS Gateway URL")
-    ipfs_pin_service_url: Optional[str] = Field(default=None, description="IPFS pinning service URL")
-    ipfs_pin_service_jwt: Optional[str] = Field(default=None, description="IPFS pinning service JWT")
+    ipfs_pin_service_url: Optional[str] = Field(
+        default=None, description="IPFS pinning service URL"
+    )
+    ipfs_pin_service_jwt: Optional[str] = Field(
+        default=None, description="IPFS pinning service JWT"
+    )
 
     # AI Model Configuration
     ai_models_path: str = Field(default="./models", description="Path to AI models")
     huggingface_token: Optional[str] = Field(default=None, description="HuggingFace API token")
     stable_diffusion_model: str = Field(
         default="stabilityai/stable-diffusion-xl-base-1.0",
-        description="Stable Diffusion model name"
+        description="Stable Diffusion model name",
     )
-    gpt_model: str = Field(
-        default="microsoft/DialoGPT-medium",
-        description="GPT model name"
-    )
+    gpt_model: str = Field(default="microsoft/DialoGPT-medium", description="GPT model name")
     music_model: str = Field(
-        default="facebook/musicgen-small",
-        description="Music generation model name"
+        default="facebook/musicgen-small", description="Music generation model name"
     )
 
     # GPU Configuration
@@ -71,43 +69,31 @@ class Settings(BaseSettings):
     model_cache_dir: str = Field(default="./cache", description="Model cache directory")
 
     # Blockchain Configuration
-    ethereum_rpc_url: str = Field(
-        default="http://localhost:8545",
-        description="Ethereum RPC URL"
-    )
+    ethereum_rpc_url: str = Field(default="http://localhost:8545", description="Ethereum RPC URL")
     ethereum_chain_id: int = Field(default=31337, description="Ethereum chain ID")
     contract_address_dgc_token: Optional[str] = Field(
-        default=None,
-        description="DGC Token contract address"
+        default=None, description="DGC Token contract address"
     )
     contract_address_provenance_registry: Optional[str] = Field(
-        default=None,
-        description="Provenance Registry contract address"
+        default=None, description="Provenance Registry contract address"
     )
     contract_address_royalty_splitter: Optional[str] = Field(
-        default=None,
-        description="Royalty Splitter contract address"
+        default=None, description="Royalty Splitter contract address"
     )
     contract_address_marketplace: Optional[str] = Field(
-        default=None,
-        description="Marketplace contract address"
+        default=None, description="Marketplace contract address"
     )
 
     # Security
-    secret_key: str = Field(
-        default="your-secret-key-here",
-        description="Secret key for JWT tokens"
-    )
+    secret_key: str = Field(default="your-secret-key-here", description="Secret key for JWT tokens")
     access_token_expire_minutes: int = Field(
-        default=30,
-        description="Access token expiration time in minutes"
+        default=30, description="Access token expiration time in minutes"
     )
     algorithm: str = Field(default="HS256", description="JWT algorithm")
 
     # Rate Limiting
     rate_limit_requests_per_minute: int = Field(
-        default=60,
-        description="Rate limit requests per minute"
+        default=60, description="Rate limit requests per minute"
     )
     rate_limit_burst: int = Field(default=10, description="Rate limit burst size")
 
@@ -118,14 +104,10 @@ class Settings(BaseSettings):
     # Content Generation Limits
     max_prompt_length: int = Field(default=1000, description="Maximum prompt length")
     max_generation_time_seconds: int = Field(
-        default=60,
-        description="Maximum generation time in seconds"
+        default=60, description="Maximum generation time in seconds"
     )
     max_content_size_mb: int = Field(default=50, description="Maximum content size in MB")
-    concurrent_generations: int = Field(
-        default=4,
-        description="Maximum concurrent generations"
-    )
+    concurrent_generations: int = Field(default=4, description="Maximum concurrent generations")
 
     @property
     def is_development(self) -> bool:

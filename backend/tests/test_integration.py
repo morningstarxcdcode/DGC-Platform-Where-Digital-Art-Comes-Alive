@@ -3,11 +3,14 @@ Integration Tests for DGC Platform
 Task 19: Final Integration Checkpoint
 Tests end-to-end workflows across all components
 """
-import pytest
-from hypothesis import given, strategies as st, settings, HealthCheck
-from httpx import AsyncClient
-from fastapi.testclient import TestClient
+
 import json
+
+import pytest
+from fastapi.testclient import TestClient
+from httpx import AsyncClient
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
 
 # Import the app
 from app.api import app
@@ -29,12 +32,15 @@ class TestEndToEndWorkflows:
     def test_generation_to_mint_workflow(self, client):
         """Test complete workflow: Generate -> Upload -> Mint"""
         # Step 1: Trigger generation
-        gen_response = client.post("/api/generate", json={
-            "prompt": "A beautiful digital artwork",
-            "content_type": "IMAGE",
-            "creator_address": "0x1234567890abcdef1234567890abcdef12345678",
-            "seed": 42
-        })
+        gen_response = client.post(
+            "/api/generate",
+            json={
+                "prompt": "A beautiful digital artwork",
+                "content_type": "IMAGE",
+                "creator_address": "0x1234567890abcdef1234567890abcdef12345678",
+                "seed": 42,
+            },
+        )
         # May return 200 or 202 depending on async implementation
         assert gen_response.status_code in [200, 202, 422]  # 422 if validation strict
 
@@ -54,9 +60,9 @@ class TestEndToEndWorkflows:
             {"content_type": "IMAGE"},
             {"min_price": "0.1", "max_price": "10"},
             {"sort": "price_low"},
-            {"page": "1", "limit": "10"}
+            {"page": "1", "limit": "10"},
         ]
-        
+
         for params in filters:
             response = client.get("/api/marketplace/listings", params=params)
             # May be 200 or 404 if endpoint not fully implemented
@@ -81,11 +87,14 @@ class TestPropertyInvariants:
     @settings(max_examples=20, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_prompt_length_handling(self, client, prompt):
         """Property: API should handle any valid prompt length"""
-        response = client.post("/api/generate", json={
-            "prompt": prompt,
-            "content_type": "TEXT",
-            "creator_address": "0x1234567890abcdef1234567890abcdef12345678"
-        })
+        response = client.post(
+            "/api/generate",
+            json={
+                "prompt": prompt,
+                "content_type": "TEXT",
+                "creator_address": "0x1234567890abcdef1234567890abcdef12345678",
+            },
+        )
         # Should not crash - may reject with 400/422 for invalid prompts
         assert response.status_code in [200, 202, 400, 422, 500]
 
@@ -104,20 +113,23 @@ class TestPropertyInvariants:
     @given(
         st.sampled_from(["IMAGE", "TEXT", "MUSIC"]),
         st.floats(min_value=0, max_value=1000, allow_nan=False),
-        st.floats(min_value=0, max_value=1000, allow_nan=False)
+        st.floats(min_value=0, max_value=1000, allow_nan=False),
     )
     @settings(max_examples=30, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_filter_completeness(self, client, content_type, min_price, max_price):
         """Property 15: Filtered queries should return consistent subsets"""
         if min_price > max_price:
             min_price, max_price = max_price, min_price
-        
-        response = client.get("/api/nfts", params={
-            "content_type": content_type,
-            "min_price": str(min_price),
-            "max_price": str(max_price)
-        })
-        
+
+        response = client.get(
+            "/api/nfts",
+            params={
+                "content_type": content_type,
+                "min_price": str(min_price),
+                "max_price": str(max_price),
+            },
+        )
+
         if response.status_code == 200:
             data = response.json()
             items = data.get("items", data if isinstance(data, list) else [])
@@ -143,9 +155,9 @@ class TestSecurityValidation:
             "'; DROP TABLE nfts;--",
             "1 OR 1=1",
             "admin'--",
-            "1; SELECT * FROM users"
+            "1; SELECT * FROM users",
         ]
-        
+
         for malicious in malicious_inputs:
             response = client.get("/api/nfts", params={"search": malicious})
             # Should return normally (200) or reject (400), not crash (500)
@@ -157,15 +169,18 @@ class TestSecurityValidation:
             "<script>alert('xss')</script>",
             "javascript:alert('xss')",
             "<img src=x onerror=alert('xss')>",
-            "{{constructor.constructor('alert(1)')()}}"
+            "{{constructor.constructor('alert(1)')()}}",
         ]
-        
+
         for payload in xss_payloads:
-            response = client.post("/api/generate", json={
-                "prompt": payload,
-                "content_type": "TEXT",
-                "creator_address": "0x1234567890abcdef1234567890abcdef12345678"
-            })
+            response = client.post(
+                "/api/generate",
+                json={
+                    "prompt": payload,
+                    "content_type": "TEXT",
+                    "creator_address": "0x1234567890abcdef1234567890abcdef12345678",
+                },
+            )
             # Should handle gracefully
             assert response.status_code in [200, 202, 400, 422]
 
@@ -176,15 +191,14 @@ class TestSecurityValidation:
             "0x123",  # Too short
             "0x" + "g" * 40,  # Invalid hex
             "",
-            "0x" + "1" * 41  # Too long
+            "0x" + "1" * 41,  # Too long
         ]
-        
+
         for addr in invalid_addresses:
-            response = client.post("/api/generate", json={
-                "prompt": "test",
-                "content_type": "IMAGE",
-                "creator_address": addr
-            })
+            response = client.post(
+                "/api/generate",
+                json={"prompt": "test", "content_type": "IMAGE", "creator_address": addr},
+            )
             # Should reject invalid addresses
             assert response.status_code in [400, 422]
 
@@ -199,12 +213,12 @@ class TestPerformanceBaselines:
     def test_api_response_time(self, client):
         """Verify API responds within acceptable time"""
         import time
-        
+
         endpoints = [
             ("/health", "GET", None),
             ("/api/nfts", "GET", None),
         ]
-        
+
         for path, method, data in endpoints:
             start = time.time()
             if method == "GET":
@@ -212,14 +226,14 @@ class TestPerformanceBaselines:
             else:
                 response = client.post(path, json=data)
             duration = time.time() - start
-            
+
             # API should respond within 5 seconds
             assert duration < 5.0, f"{path} took {duration}s"
 
     def test_pagination_scales(self, client):
         """Verify pagination works with various page sizes"""
         page_sizes = [1, 10, 50, 100]
-        
+
         for size in page_sizes:
             response = client.get("/api/nfts", params={"limit": size})
             if response.status_code == 200:
@@ -241,7 +255,7 @@ class TestDataIntegrity:
         if response.status_code == 200:
             data = response.json()
             items = data.get("items", data if isinstance(data, list) else [])
-            
+
             required_fields = ["tokenId", "name"]
             for item in items:
                 for field in required_fields:

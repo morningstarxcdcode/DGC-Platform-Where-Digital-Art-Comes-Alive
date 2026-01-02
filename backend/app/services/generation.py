@@ -5,16 +5,16 @@ This module provides the core AI generation functionality including
 image generation with Stable Diffusion and text generation with GPT-like models.
 """
 
-from dataclasses import dataclass, field
-from typing import Dict, Any, Optional, List, Union
-from enum import Enum
-import hashlib
-import time
 import asyncio
-import uuid
-from datetime import datetime
+import hashlib
 import json
 import logging
+import time
+import uuid
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional, Union
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class GenerationStatus(Enum):
     """Status of a generation job."""
+
     PENDING = "PENDING"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
@@ -31,6 +32,7 @@ class GenerationStatus(Enum):
 
 class ContentType(Enum):
     """Supported content types for generation."""
+
     IMAGE = "IMAGE"
     TEXT = "TEXT"
     MUSIC = "MUSIC"
@@ -49,6 +51,7 @@ class GenerationRequest:
         creator_address: Ethereum address of the creator
         timeout: Maximum time allowed for generation in seconds (default 60)
     """
+
     prompt: str
     content_type: ContentType
     creator_address: str
@@ -84,6 +87,7 @@ class GenerationResult:
         generation_time_ms: Time taken for generation in milliseconds
         error: Error message if generation failed
     """
+
     job_id: str
     status: GenerationStatus
     content: Optional[Union[bytes, str]] = None
@@ -108,7 +112,7 @@ class GenerationResult:
             self.prompt is not None,
             self.seed is not None,
             self.parameters is not None,
-            self.timestamp is not None
+            self.timestamp is not None,
         ]
         return all(required_fields)
 
@@ -124,7 +128,7 @@ class GenerationResult:
             "parameters": self.parameters,
             "timestamp": self.timestamp,
             "generation_time_ms": self.generation_time_ms,
-            "error": self.error
+            "error": self.error,
         }
 
 
@@ -166,7 +170,7 @@ class GenerationService:
     def _compute_content_hash(self, content: Union[bytes, str]) -> str:
         """Compute SHA-256 hash of content."""
         if isinstance(content, str):
-            content = content.encode('utf-8')
+            content = content.encode("utf-8")
         return "0x" + hashlib.sha256(content).hexdigest()
 
     async def generate(self, request: GenerationRequest) -> GenerationResult:
@@ -191,7 +195,7 @@ class GenerationService:
             prompt=request.prompt,
             seed=request.seed if request.seed is not None else self._generate_seed(),
             parameters=request.parameters,
-            model_version=self._get_model_version(request.content_type)
+            model_version=self._get_model_version(request.content_type),
         )
 
         self._jobs[job_id] = result
@@ -237,12 +241,7 @@ class GenerationService:
         self._jobs[job_id] = result
         return result
 
-    async def _generate_image(
-        self,
-        prompt: str,
-        seed: int,
-        parameters: Dict[str, Any]
-    ) -> bytes:
+    async def _generate_image(self, prompt: str, seed: int, parameters: Dict[str, Any]) -> bytes:
         """
         Generate an image using Stable Diffusion.
 
@@ -257,7 +256,9 @@ class GenerationService:
         steps = parameters.get("steps", 30)
         guidance_scale = parameters.get("guidance_scale", 7.5)
 
-        logger.info(f"Generating image: prompt='{prompt[:50]}...', seed={seed}, size={width}x{height}")
+        logger.info(
+            f"Generating image: prompt='{prompt[:50]}...', seed={seed}, size={width}x{height}"
+        )
 
         # Simulate generation time
         await asyncio.sleep(0.5)
@@ -265,23 +266,17 @@ class GenerationService:
         # Generate deterministic placeholder based on seed (for reproducibility testing)
         # In production, this would use actual model with the seed
         import random
+
         rng = random.Random(seed)
 
         # Create a simple deterministic byte pattern
-        content = bytes([
-            rng.randint(0, 255) for _ in range(100)
-        ])
+        content = bytes([rng.randint(0, 255) for _ in range(100)])
 
         # Add header to make it identifiable
-        header = f"DGC_IMAGE:{seed}:{prompt[:20]}:".encode('utf-8')
+        header = f"DGC_IMAGE:{seed}:{prompt[:20]}:".encode("utf-8")
         return header + content
 
-    async def _generate_text(
-        self,
-        prompt: str,
-        seed: int,
-        parameters: Dict[str, Any]
-    ) -> str:
+    async def _generate_text(self, prompt: str, seed: int, parameters: Dict[str, Any]) -> str:
         """
         Generate text using GPT-like model.
 
@@ -293,29 +288,37 @@ class GenerationService:
         max_tokens = parameters.get("max_tokens", 1000)
         temperature = parameters.get("temperature", 0.7)
 
-        logger.info(f"Generating text: prompt='{prompt[:50]}...', seed={seed}, max_tokens={max_tokens}")
+        logger.info(
+            f"Generating text: prompt='{prompt[:50]}...', seed={seed}, max_tokens={max_tokens}"
+        )
 
         # Simulate generation time
         await asyncio.sleep(0.3)
 
         # Generate deterministic text based on seed (for reproducibility testing)
         import random
+
         rng = random.Random(seed)
 
         # In production, use actual model with seed
-        words = ["creative", "innovative", "artistic", "digital", "unique",
-                 "generated", "AI", "content", "beautiful", "fascinating"]
+        words = [
+            "creative",
+            "innovative",
+            "artistic",
+            "digital",
+            "unique",
+            "generated",
+            "AI",
+            "content",
+            "beautiful",
+            "fascinating",
+        ]
 
         generated_words = [rng.choice(words) for _ in range(min(max_tokens // 5, 50))]
 
         return f"Generated from prompt: '{prompt}'\n\n" + " ".join(generated_words)
 
-    async def _generate_music(
-        self,
-        prompt: str,
-        seed: int,
-        parameters: Dict[str, Any]
-    ) -> bytes:
+    async def _generate_music(self, prompt: str, seed: int, parameters: Dict[str, Any]) -> bytes:
         """
         Generate music using MusicGen-like model.
 
@@ -325,21 +328,22 @@ class GenerationService:
         duration = parameters.get("duration", 10)  # seconds
         sample_rate = parameters.get("sample_rate", 44100)
 
-        logger.info(f"Generating music: prompt='{prompt[:50]}...', seed={seed}, duration={duration}s")
+        logger.info(
+            f"Generating music: prompt='{prompt[:50]}...', seed={seed}, duration={duration}s"
+        )
 
         # Simulate generation time
         await asyncio.sleep(0.5)
 
         # Generate deterministic placeholder based on seed
         import random
+
         rng = random.Random(seed)
 
         # Create deterministic byte pattern
-        content = bytes([
-            rng.randint(0, 255) for _ in range(100)
-        ])
+        content = bytes([rng.randint(0, 255) for _ in range(100)])
 
-        header = f"DGC_MUSIC:{seed}:{prompt[:20]}:".encode('utf-8')
+        header = f"DGC_MUSIC:{seed}:{prompt[:20]}:".encode("utf-8")
         return header + content
 
     def get_job(self, job_id: str) -> Optional[GenerationResult]:

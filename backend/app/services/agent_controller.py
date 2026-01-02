@@ -11,9 +11,9 @@ import asyncio
 import logging
 import uuid
 from dataclasses import dataclass, field
-from typing import Dict, Any, Optional, List, Callable
 from datetime import datetime
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -24,6 +24,7 @@ STATUS_EVOLUTION_COMPLETE = "Evolution complete!"
 
 class AgentType(Enum):
     """Types of AI agents in the system."""
+
     IMAGE = "IMAGE"
     TEXT = "TEXT"
     MUSIC = "MUSIC"
@@ -35,6 +36,7 @@ class AgentType(Enum):
 
 class AgentStatus(Enum):
     """Agent execution status."""
+
     READY = "READY"
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
@@ -44,6 +46,7 @@ class AgentStatus(Enum):
 
 class ExecutionMode(Enum):
     """Agent execution mode."""
+
     SINGLE = "SINGLE"  # Run one agent
     ALL = "ALL"  # Run all agents
     CUSTOM = "CUSTOM"  # Run selected agents
@@ -53,6 +56,7 @@ class ExecutionMode(Enum):
 @dataclass
 class AgentConfig:
     """Configuration for an AI agent."""
+
     agent_type: AgentType
     name: str
     description: str
@@ -67,13 +71,14 @@ class AgentConfig:
             "description": self.description,
             "icon": self.icon,
             "enabled": self.enabled,
-            "parameters": self.parameters
+            "parameters": self.parameters,
         }
 
 
 @dataclass
 class AgentProgress:
     """Progress tracking for an agent."""
+
     agent_type: AgentType
     status: AgentStatus
     progress: float = 0.0  # 0-100
@@ -92,22 +97,21 @@ class AgentProgress:
             "started_at": self.started_at,
             "completed_at": self.completed_at,
             "error": self.error,
-            "result": self.result
+            "result": self.result,
         }
 
 
 @dataclass
 class AgentPreset:
     """Saved agent configuration preset."""
+
     id: str
     name: str
     description: str
     enabled_agents: List[AgentType]
     parameters: Dict[AgentType, Dict[str, Any]]
     chain_config: Optional[List[AgentType]] = None
-    created_at: int = field(
-        default_factory=lambda: int(datetime.now().timestamp())
-    )
+    created_at: int = field(default_factory=lambda: int(datetime.now().timestamp()))
 
     def to_dict(self) -> Dict[str, Any]:
         chain_cfg = None
@@ -120,13 +124,14 @@ class AgentPreset:
             "enabled_agents": [a.value for a in self.enabled_agents],
             "parameters": {k.value: v for k, v in self.parameters.items()},
             "chain_config": chain_cfg,
-            "created_at": self.created_at
+            "created_at": self.created_at,
         }
 
 
 @dataclass
 class ExecutionResult:
     """Result of agent execution."""
+
     execution_id: str
     mode: ExecutionMode
     agents: Dict[AgentType, AgentProgress]
@@ -143,20 +148,14 @@ class ExecutionResult:
             "started_at": self.started_at,
             "completed_at": self.completed_at,
             "total_time_ms": self.total_time_ms,
-            "success": self.success
+            "success": self.success,
         }
 
 
 class BaseAgent:
     """Base class for AI agents."""
 
-    def __init__(
-        self,
-        agent_type: AgentType,
-        name: str,
-        description: str,
-        icon: str
-    ):
+    def __init__(self, agent_type: AgentType, name: str, description: str, icon: str):
         self.agent_type = agent_type
         self.name = name
         self.description = description
@@ -166,7 +165,7 @@ class BaseAgent:
     async def execute(
         self,
         input_data: Dict[str, Any],
-        progress_callback: Optional[Callable[[float, str], None]] = None
+        progress_callback: Optional[Callable[[float, str], None]] = None,
     ) -> Dict[str, Any]:
         """Execute the agent task."""
         raise NotImplementedError("Subclasses must implement execute()")
@@ -180,17 +179,12 @@ class ImageGenerationAgent(BaseAgent):
     """Agent for AI image generation."""
 
     def __init__(self):
-        super().__init__(
-            AgentType.IMAGE,
-            "Image Agent",
-            "Creates pictures from your words",
-            "🎨"
-        )
+        super().__init__(AgentType.IMAGE, "Image Agent", "Creates pictures from your words", "🎨")
 
     async def execute(
         self,
         input_data: Dict[str, Any],
-        progress_callback: Optional[Callable[[float, str], None]] = None
+        progress_callback: Optional[Callable[[float, str], None]] = None,
     ) -> Dict[str, Any]:
         prompt = input_data.get("prompt", "")
 
@@ -217,7 +211,7 @@ class ImageGenerationAgent(BaseAgent):
             "content_type": "IMAGE",
             "prompt": prompt,
             "image_url": f"generated_image_{uuid.uuid4().hex[:8]}.png",
-            "model": "stable-diffusion-xl"
+            "model": "stable-diffusion-xl",
         }
 
 
@@ -225,17 +219,12 @@ class TextGenerationAgent(BaseAgent):
     """Agent for AI text generation."""
 
     def __init__(self):
-        super().__init__(
-            AgentType.TEXT,
-            "Text Agent",
-            "Writes stories and descriptions",
-            "📝"
-        )
+        super().__init__(AgentType.TEXT, "Text Agent", "Writes stories and descriptions", "📝")
 
     async def execute(
         self,
         input_data: Dict[str, Any],
-        progress_callback: Optional[Callable[[float, str], None]] = None
+        progress_callback: Optional[Callable[[float, str], None]] = None,
     ) -> Dict[str, Any]:
         prompt = input_data.get("prompt", "")
 
@@ -255,7 +244,7 @@ class TextGenerationAgent(BaseAgent):
             "content_type": "TEXT",
             "prompt": prompt,
             "text": f"Generated description for: {prompt}",
-            "model": "gpt-4-turbo"
+            "model": "gpt-4-turbo",
         }
 
 
@@ -263,17 +252,12 @@ class MusicGenerationAgent(BaseAgent):
     """Agent for AI music generation."""
 
     def __init__(self):
-        super().__init__(
-            AgentType.MUSIC,
-            "Music Agent",
-            "Composes music for your NFTs",
-            "🎵"
-        )
+        super().__init__(AgentType.MUSIC, "Music Agent", "Composes music for your NFTs", "🎵")
 
     async def execute(
         self,
         input_data: Dict[str, Any],
-        progress_callback: Optional[Callable[[float, str], None]] = None
+        progress_callback: Optional[Callable[[float, str], None]] = None,
     ) -> Dict[str, Any]:
         prompt = input_data.get("prompt", "ambient background")
 
@@ -298,7 +282,7 @@ class MusicGenerationAgent(BaseAgent):
             "prompt": prompt,
             "audio_url": f"generated_music_{uuid.uuid4().hex[:8]}.mp3",
             "duration": 30,
-            "model": "musicgen-large"
+            "model": "musicgen-large",
         }
 
 
@@ -306,17 +290,12 @@ class DNAEvolutionAgent(BaseAgent):
     """Agent for Content DNA evolution."""
 
     def __init__(self):
-        super().__init__(
-            AgentType.DNA,
-            "DNA Agent",
-            "Evolves your content over time",
-            "🧬"
-        )
+        super().__init__(AgentType.DNA, "DNA Agent", "Evolves your content over time", "🧬")
 
     async def execute(
         self,
         input_data: Dict[str, Any],
-        progress_callback: Optional[Callable[[float, str], None]] = None
+        progress_callback: Optional[Callable[[float, str], None]] = None,
     ) -> Dict[str, Any]:
         dna_hash = input_data.get("dna_hash", "")
 
@@ -336,7 +315,7 @@ class DNAEvolutionAgent(BaseAgent):
             "original_dna": dna_hash,
             "evolved_dna": f"evolved_{uuid.uuid4().hex[:16]}",
             "mutations": ["color_shift", "complexity_increase"],
-            "rarity_change": "+5"
+            "rarity_change": "+5",
         }
 
 
@@ -344,17 +323,12 @@ class EmotionalAIAgent(BaseAgent):
     """Agent for emotional analysis and response."""
 
     def __init__(self):
-        super().__init__(
-            AgentType.EMOTION,
-            "Emotion Agent",
-            "Responds to your feelings",
-            "💖"
-        )
+        super().__init__(AgentType.EMOTION, "Emotion Agent", "Responds to your feelings", "💖")
 
     async def execute(
         self,
         input_data: Dict[str, Any],
-        progress_callback: Optional[Callable[[float, str], None]] = None
+        progress_callback: Optional[Callable[[float, str], None]] = None,
     ) -> Dict[str, Any]:
         if progress_callback:
             progress_callback(30, "Detecting emotions...")
@@ -371,11 +345,7 @@ class EmotionalAIAgent(BaseAgent):
             "status": "success",
             "detected_emotion": "happy",
             "confidence": 0.85,
-            "adaptation": {
-                "color_shift": 45,
-                "brightness": 1.2,
-                "animation_speed": 1.5
-            }
+            "adaptation": {"color_shift": 45, "brightness": 1.2, "animation_speed": 1.5},
         }
 
 
@@ -383,17 +353,12 @@ class BlockchainSearchAgent(BaseAgent):
     """Agent for blockchain data search."""
 
     def __init__(self):
-        super().__init__(
-            AgentType.SEARCH,
-            "Search Agent",
-            "Finds blockchain data instantly",
-            "🔍"
-        )
+        super().__init__(AgentType.SEARCH, "Search Agent", "Finds blockchain data instantly", "🔍")
 
     async def execute(
         self,
         input_data: Dict[str, Any],
-        progress_callback: Optional[Callable[[float, str], None]] = None
+        progress_callback: Optional[Callable[[float, str], None]] = None,
     ) -> Dict[str, Any]:
         query = input_data.get("query", "")
 
@@ -411,8 +376,8 @@ class BlockchainSearchAgent(BaseAgent):
             "top_results": [
                 {"type": "transaction", "hash": "0xabc..."},
                 {"type": "address", "address": "0xdef..."},
-                {"type": "nft", "token_id": 123}
-            ]
+                {"type": "nft", "token_id": 123},
+            ],
         }
 
 
@@ -421,16 +386,13 @@ class AnalyticsAgent(BaseAgent):
 
     def __init__(self):
         super().__init__(
-            AgentType.ANALYTICS,
-            "Analytics Agent",
-            "Tracks your portfolio performance",
-            "📊"
+            AgentType.ANALYTICS, "Analytics Agent", "Tracks your portfolio performance", "📊"
         )
 
     async def execute(
         self,
         input_data: Dict[str, Any],
-        progress_callback: Optional[Callable[[float, str], None]] = None
+        progress_callback: Optional[Callable[[float, str], None]] = None,
     ) -> Dict[str, Any]:
         address = input_data.get("address", "")
 
@@ -451,7 +413,7 @@ class AnalyticsAgent(BaseAgent):
             "total_value": "5.25 ETH",
             "nft_count": 12,
             "roi": "+15.5%",
-            "top_performing": "Living Art #42"
+            "top_performing": "Living Art #42",
         }
 
 
@@ -471,7 +433,7 @@ class AgentController:
             AgentType.DNA: DNAEvolutionAgent(),
             AgentType.EMOTION: EmotionalAIAgent(),
             AgentType.SEARCH: BlockchainSearchAgent(),
-            AgentType.ANALYTICS: AnalyticsAgent()
+            AgentType.ANALYTICS: AnalyticsAgent(),
         }
         self._presets: Dict[str, AgentPreset] = {}
         self._executions: Dict[str, ExecutionResult] = {}
@@ -484,7 +446,7 @@ class AgentController:
                 agent_type=agent.agent_type,
                 name=agent.name,
                 description=agent.description,
-                icon=agent.icon
+                icon=agent.icon,
             )
             for agent in self._agents.values()
         ]
@@ -493,23 +455,21 @@ class AgentController:
         self,
         agent_type: AgentType,
         input_data: Dict[str, Any],
-        progress_callback: Optional[Callable] = None
+        progress_callback: Optional[Callable] = None,
     ) -> ExecutionResult:
         """Execute a single agent."""
         execution_id = str(uuid.uuid4())
         started_at = int(datetime.now().timestamp() * 1000)
 
         progress = AgentProgress(
-            agent_type=agent_type,
-            status=AgentStatus.RUNNING,
-            started_at=started_at
+            agent_type=agent_type, status=AgentStatus.RUNNING, started_at=started_at
         )
 
         result = ExecutionResult(
             execution_id=execution_id,
             mode=ExecutionMode.SINGLE,
             agents={agent_type: progress},
-            started_at=started_at
+            started_at=started_at,
         )
         self._executions[execution_id] = result
 
@@ -541,22 +501,16 @@ class AgentController:
         return result
 
     async def execute_all(
-        self,
-        input_data: Dict[str, Any],
-        progress_callback: Optional[Callable] = None
+        self, input_data: Dict[str, Any], progress_callback: Optional[Callable] = None
     ) -> ExecutionResult:
         """Execute all agents in parallel."""
-        return await self.execute_custom(
-            list(self._agents.keys()),
-            input_data,
-            progress_callback
-        )
+        return await self.execute_custom(list(self._agents.keys()), input_data, progress_callback)
 
     async def execute_custom(
         self,
         agent_types: List[AgentType],
         input_data: Dict[str, Any],
-        progress_callback: Optional[Callable] = None
+        progress_callback: Optional[Callable] = None,
     ) -> ExecutionResult:
         """Execute selected agents in parallel."""
         execution_id = str(uuid.uuid4())
@@ -564,9 +518,7 @@ class AgentController:
 
         agents_progress = {
             agent_type: AgentProgress(
-                agent_type=agent_type,
-                status=AgentStatus.RUNNING,
-                started_at=started_at
+                agent_type=agent_type, status=AgentStatus.RUNNING, started_at=started_at
             )
             for agent_type in agent_types
         }
@@ -575,7 +527,7 @@ class AgentController:
             execution_id=execution_id,
             mode=ExecutionMode.CUSTOM,
             agents=agents_progress,
-            started_at=started_at
+            started_at=started_at,
         )
         self._executions[execution_id] = result
 
@@ -615,7 +567,7 @@ class AgentController:
         self,
         chain_config: List[AgentType],
         input_data: Dict[str, Any],
-        progress_callback: Optional[Callable] = None
+        progress_callback: Optional[Callable] = None,
     ) -> ExecutionResult:
         """
         Execute agents in sequence with output chaining.
@@ -627,9 +579,7 @@ class AgentController:
 
         agents_progress = {
             agent_type: AgentProgress(
-                agent_type=agent_type,
-                status=AgentStatus.READY,
-                started_at=None
+                agent_type=agent_type, status=AgentStatus.READY, started_at=None
             )
             for agent_type in chain_config
         }
@@ -638,7 +588,7 @@ class AgentController:
             execution_id=execution_id,
             mode=ExecutionMode.CHAIN,
             agents=agents_progress,
-            started_at=started_at
+            started_at=started_at,
         )
         self._executions[execution_id] = result
 
@@ -654,12 +604,7 @@ class AgentController:
                 agent_prog = progress
                 current_agent = agent_type
 
-                def update_progress(
-                    pct: float,
-                    step: str,
-                    prog=agent_prog,
-                    agent=current_agent
-                ):
+                def update_progress(pct: float, step: str, prog=agent_prog, agent=current_agent):
                     prog.progress = pct
                     prog.current_step = step
                     if progress_callback:

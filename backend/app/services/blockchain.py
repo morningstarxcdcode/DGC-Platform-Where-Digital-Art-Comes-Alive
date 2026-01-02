@@ -7,9 +7,9 @@ and indexing NFT data for the marketplace and API.
 
 import asyncio
 import logging
-from typing import Dict, Any, Optional, List, Callable
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ContractEvent:
     """Represents a blockchain contract event."""
+
     contract_address: str
     event_name: str
     block_number: int
@@ -30,6 +31,7 @@ class ContractEvent:
 @dataclass
 class NFTMintEvent:
     """Parsed NFT mint event data."""
+
     token_id: int
     creator: str
     metadata_cid: str
@@ -65,12 +67,7 @@ class BlockchainEventListener:
         # In-memory event storage (in production, use database)
         self._processed_events: List[ContractEvent] = []
 
-    def add_contract(
-        self,
-        address: str,
-        abi: List[Dict[str, Any]],
-        start_block: int = 0
-    ) -> None:
+    def add_contract(self, address: str, abi: List[Dict[str, Any]], start_block: int = 0) -> None:
         """
         Add a contract to monitor for events.
 
@@ -82,7 +79,7 @@ class BlockchainEventListener:
         self._contracts[address.lower()] = {
             "abi": abi,
             "start_block": start_block,
-            "events": self._extract_events_from_abi(abi)
+            "events": self._extract_events_from_abi(abi),
         }
 
         logger.info(f"Added contract for monitoring: {address}")
@@ -143,11 +140,7 @@ class BlockchainEventListener:
 
         # Process events from each contract
         for contract_address, contract_info in self._contracts.items():
-            await self._process_contract_events(
-                contract_address,
-                contract_info,
-                latest_block
-            )
+            await self._process_contract_events(contract_address, contract_info, latest_block)
 
         self._last_processed_block = latest_block
 
@@ -160,13 +153,11 @@ class BlockchainEventListener:
         """
         # Simulate block progression
         import time
+
         return int(time.time()) // 15  # New block every 15 seconds
 
     async def _process_contract_events(
-        self,
-        contract_address: str,
-        contract_info: Dict[str, Any],
-        to_block: int
+        self, contract_address: str, contract_info: Dict[str, Any], to_block: int
     ) -> None:
         """
         Process events for a specific contract in a block range.
@@ -186,19 +177,15 @@ class BlockchainEventListener:
                 contract_address=contract_address,
                 event_name="Minted",
                 block_number=to_block,
-                transaction_hash=(
-                    f"0x{hash(f'{contract_address}{to_block}'):064x}"
-                ),
+                transaction_hash=(f"0x{hash(f'{contract_address}{to_block}'):064x}"),
                 log_index=0,
                 args={
                     "tokenId": to_block % 1000 + 1,  # Simulate token ID
                     "creator": f"0x{hash(f'creator{to_block}'):040x}",
                     "metadataCID": f"Qm{hash(f'metadata{to_block}'):044x}",
-                    "provenanceHash": (
-                        f"0x{hash(f'provenance{to_block}'):064x}"
-                    )
+                    "provenanceHash": (f"0x{hash(f'provenance{to_block}'):064x}"),
                 },
-                timestamp=int(datetime.now().timestamp())
+                timestamp=int(datetime.now().timestamp()),
             )
 
             await self._handle_event(event)
@@ -216,21 +203,13 @@ class BlockchainEventListener:
         if event.event_name in self._event_handlers:
             try:
                 await self._event_handlers[event.event_name](event)
-                logger.info(
-                    f"Processed {event.event_name} event: {event.args}"
-                )
+                logger.info(f"Processed {event.event_name} event: {event.args}")
             except Exception as e:
-                logger.error(
-                    f"Error handling {event.event_name} event: {e}"
-                )
+                logger.error(f"Error handling {event.event_name} event: {e}")
         else:
-            logger.debug(
-                f"No handler registered for event: {event.event_name}"
-            )
+            logger.debug(f"No handler registered for event: {event.event_name}")
 
-    def get_processed_events(
-        self, event_name: Optional[str] = None
-    ) -> List[ContractEvent]:
+    def get_processed_events(self, event_name: Optional[str] = None) -> List[ContractEvent]:
         """
         Get list of processed events, optionally filtered by event name.
 
@@ -241,10 +220,7 @@ class BlockchainEventListener:
             List of processed events
         """
         if event_name:
-            return [
-                e for e in self._processed_events
-                if e.event_name == event_name
-            ]
+            return [e for e in self._processed_events if e.event_name == event_name]
         return self._processed_events.copy()
 
 
@@ -279,16 +255,13 @@ class NFTIndexer:
             provenance_hash=event.args["provenanceHash"],
             block_number=event.block_number,
             transaction_hash=event.transaction_hash,
-            timestamp=event.timestamp
+            timestamp=event.timestamp,
         )
 
         # Index the NFT
         self._index_nft(mint_data)
 
-        logger.info(
-            f"Indexed NFT: token_id={mint_data.token_id}, "
-            f"creator={mint_data.creator}"
-        )
+        logger.info(f"Indexed NFT: token_id={mint_data.token_id}, " f"creator={mint_data.creator}")
 
     def _index_nft(self, mint_data: NFTMintEvent) -> None:
         """
@@ -306,7 +279,7 @@ class NFTIndexer:
             "block_number": mint_data.block_number,
             "transaction_hash": mint_data.transaction_hash,
             "timestamp": mint_data.timestamp,
-            "indexed_at": int(datetime.now().timestamp())
+            "indexed_at": int(datetime.now().timestamp()),
         }
 
         # In production, would make HTTP request to API indexing endpoint
@@ -343,9 +316,7 @@ def get_nft_indexer() -> NFTIndexer:
 
 
 def setup_blockchain_monitoring(
-    dgc_token_address: str,
-    dgc_token_abi: List[Dict[str, Any]],
-    start_block: int = 0
+    dgc_token_address: str, dgc_token_abi: List[Dict[str, Any]], start_block: int = 0
 ) -> None:
     """
     Set up blockchain monitoring for DGC contracts.
