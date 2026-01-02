@@ -1,9 +1,9 @@
 # 🌟 DGC Platform: Where Digital Art Comes Alive
 
-[![CI/CD Pipeline](https://github.com/morningstarxcdcode/DGC-Platform-Where-Digital-Art-Comes-Alive/actions/workflows/ci.yml/badge.svg)](https://github.com/morningstarxcdcode/DGC-Platform-Where-Digital-Art-Comes-Alive/actions/workflows/ci.yml)
-[![Code Quality](https://github.com/morningstarxcdcode/DGC-Platform-Where-Digital-Art-Comes-Alive/actions/workflows/code-quality.yml/badge.svg)](https://github.com/morningstarxcdcode/DGC-Platform-Where-Digital-Art-Comes-Alive/actions/workflows/code-quality.yml)
-[![Deploy to Pages](https://github.com/morningstarxcdcode/DGC-Platform-Where-Digital-Art-Comes-Alive/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/morningstarxcdcode/DGC-Platform-Where-Digital-Art-Comes-Alive/actions/workflows/deploy-pages.yml)
+[![CI/CD Pipeline](https://github.com/morningstarxcdcode/DGC-Platform-Where-Digital-Art-Comes-Alive/actions/workflows/ci-complete.yml/badge.svg)](https://github.com/morningstarxcdcode/DGC-Platform-Where-Digital-Art-Comes-Alive/actions/workflows/ci-complete.yml)
+[![Deploy to Pages](https://github.com/morningstarxcdcode/DGC-Platform-Where-Digital-Art-Comes-Alive/actions/workflows/deploy-github-pages.yml/badge.svg)](https://github.com/morningstarxcdcode/DGC-Platform-Where-Digital-Art-Comes-Alive/actions/workflows/deploy-github-pages.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub release](https://img.shields.io/github/v/release/morningstarxcdcode/DGC-Platform-Where-Digital-Art-Comes-Alive)](https://github.com/morningstarxcdcode/DGC-Platform-Where-Digital-Art-Comes-Alive/releases)
 
 **The world's first platform for living, breathing NFTs that respond to your emotions and evolve over time.**
 

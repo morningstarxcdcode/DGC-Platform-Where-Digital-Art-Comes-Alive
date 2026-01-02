@@ -1,0 +1,44 @@
+{
+  "name": "decentralized-generative-content-platform",
+  "version": "1.0.0",
+  "description": "A blockchain-backed generative AI marketplace where users create and trade AI-generated digital assets with full on-chain provenance and token economics",
+  "private": true,
+  "workspaces": [
+    "contracts",
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "install:all": "npm install && npm run install:contracts && npm run install:backend && npm run install:frontend",
+    "install:contracts": "cd contracts && npm install",
+    "install:backend": "cd backend && pip install -r requirements.txt",
+    "install:frontend": "cd frontend && npm install",
+    "build": "npm run build:contracts && npm run build:backend && npm run build:frontend",
+    "build:contracts": "cd contracts && npm run build",
+    "build:backend": "cd backend && python -m build",
+    "build:frontend": "cd frontend && npm run build",
+    "test": "npm run test:contracts && npm run test:backend && npm run test:frontend",
+    "test:contracts": "cd contracts && npm test",
+    "test:backend": "cd backend && pytest",
+    "test:frontend": "cd frontend && npm test",
+    "dev:contracts": "cd contracts && npm run node",
+    "dev:backend": "cd backend && uvicorn main:app --reload",
+    "dev:frontend": "cd frontend && npm run dev",
+    "start": "concurrently --names \"CONTRACTS,BACKEND,FRONTEND\" --prefix-colors \"yellow,blue,green\" \"npm run dev:contracts\" \"sleep 5 && npm run dev:backend\" \"sleep 8 && npm run dev:frontend\"",
+    "start:prod": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"blue,green\" \"npm run dev:backend\" \"npm run dev:frontend\""
+  },
+  "keywords": [
+    "blockchain",
+    "nft",
+    "ai",
+    "generative",
+    "ethereum",
+    "marketplace",
+    "provenance"
+  ],
+  "author": "Sourav Rajak <morningstarxcdcode>",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

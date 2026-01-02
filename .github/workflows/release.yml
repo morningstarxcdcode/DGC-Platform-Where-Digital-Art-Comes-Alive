@@ -1,0 +1,82 @@
+name: Automated Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm ci
+        npm run build
+    
+    - name: Create Release Archives
+      run: |
+        # Create archives for distribution
+        tar -czf frontend-dist.tar.gz -C frontend/dist .
+        zip -r frontend-dist.zip frontend/dist
+        
+        # Create contracts archive
+        tar -czf contracts.tar.gz contracts/contracts contracts/scripts
+        
+    - name: Generate Release Notes
+      id: release_notes
+      run: |
+        cat > release_notes.md << 'EOF'
+        ## DGC Platform Release
+        
+        ### 🎨 Features
+        - Decentralized Generative Content Platform
+        - AI-powered NFT generation
+        - IPFS integration for decentralized storage
+        - Smart contracts for on-chain provenance
+        - React-based frontend with Web3 integration
+        
+        ### 📦 What's Included
+        - Frontend build (ready for deployment)
+        - Smart contracts (Solidity)
+        - Backend API (FastAPI)
+        
+        ### 🚀 Quick Start
+        See [README.md](README.md) for detailed setup instructions.
+        
+        ### 📝 Documentation
+        - [Deployment Guide](docs/DEPLOYMENT_GUIDE.md)
+        - [Running Guide](DGC_PLATFORM_RUNNING_GUIDE.md)
+        - [Technical Flowcharts](DGC_TECHNICAL_FLOWCHARTS.md)
+        EOF
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        body_path: release_notes.md
+        files: |
+          frontend-dist.tar.gz
+          frontend-dist.zip
+          contracts.tar.gz
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

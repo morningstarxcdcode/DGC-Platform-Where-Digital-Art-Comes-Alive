@@ -1,0 +1,93 @@
+# DGC Platform - Production Docker Compose
+# Optimized for production deployment
+
+services:
+  # Backend API (Production)
+  backend:
+    build:
+      context: ./backend
+      target: production
+    container_name: dgc-backend-prod
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - IPFS_API_URL=${IPFS_API_URL}
+      - REDIS_URL=${REDIS_URL}
+      - ETH_RPC_URL=${ETH_RPC_URL}
+      - SECRET_KEY=${SECRET_KEY}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+    networks:
+      - dgc-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Frontend (Production with Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      target: production
+      args:
+        - VITE_API_URL=${VITE_API_URL}
+        - VITE_CHAIN_ID=${VITE_CHAIN_ID}
+        - VITE_DGC_TOKEN_ADDRESS=${VITE_DGC_TOKEN_ADDRESS}
+        - VITE_PROVENANCE_ADDRESS=${VITE_PROVENANCE_ADDRESS}
+        - VITE_ROYALTY_ADDRESS=${VITE_ROYALTY_ADDRESS}
+        - VITE_MARKETPLACE_ADDRESS=${VITE_MARKETPLACE_ADDRESS}
+    container_name: dgc-frontend-prod
+    restart: always
+    ports:
+      - "80:80"
+    networks:
+      - dgc-network
+    depends_on:
+      - backend
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # Redis Cache (Production)
+  redis:
+    image: redis:7-alpine
+    container_name: dgc-redis-prod
+    restart: always
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - dgc-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+networks:
+  dgc-network:
+    driver: bridge
+
+volumes:
+  redis-data:

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16213e;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect fill="url(#bgGrad)" width="400" height="400"/>
+  <rect fill="#0f3460" x="80" y="80" width="240" height="180" rx="12"/>
+  <circle cx="150" cy="150" r="35" fill="#646cff" opacity="0.7"/>
+  <polygon points="320,260 200,160 140,220 80,180 80,260" fill="#e94560" opacity="0.6"/>
+  <rect x="100" y="290" width="200" height="12" rx="6" fill="#333"/>
+  <rect x="130" y="315" width="140" height="8" rx="4" fill="#444"/>
+  <text x="200" y="365" text-anchor="middle" fill="#888" font-family="Arial, sans-serif" font-size="12">No Image Available</text>
+</svg>

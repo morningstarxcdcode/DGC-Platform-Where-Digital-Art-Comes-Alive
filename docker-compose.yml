@@ -1,0 +1,142 @@
+# DGC Platform - Docker Compose
+# Full stack development and deployment configuration
+
+services:
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      target: development
+    container_name: dgc-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/dgc
+      - IPFS_API_URL=http://ipfs:5001
+      - REDIS_URL=redis://redis:6379
+      - ETH_RPC_URL=http://ganache:8545
+      - SECRET_KEY=${SECRET_KEY:-development-secret-key}
+    volumes:
+      - ./backend:/app
+      - backend-data:/app/data
+    depends_on:
+      - db
+      - redis
+      - ipfs
+    networks:
+      - dgc-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      target: development
+    container_name: dgc-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - VITE_CHAIN_ID=1337
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - dgc-network
+
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: dgc-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=dgc
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - dgc-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: dgc-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - dgc-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # IPFS Node
+  ipfs:
+    image: ipfs/kubo:latest
+    container_name: dgc-ipfs
+    ports:
+      - "4001:4001"     # P2P
+      - "5001:5001"     # API
+      - "8080:8080"     # Gateway
+    volumes:
+      - ipfs-data:/data/ipfs
+    networks:
+      - dgc-network
+
+  # Local Blockchain (Ganache)
+  ganache:
+    image: trufflesuite/ganache:latest
+    container_name: dgc-ganache
+    ports:
+      - "8545:8545"
+    command: >
+      --chain.chainId 1337
+      --wallet.deterministic
+      --wallet.accounts 10
+      --wallet.defaultBalance 1000
+      --miner.blockGasLimit 30000000
+    networks:
+      - dgc-network
+
+  # Contract Deployer (one-time)
+  deployer:
+    build:
+      context: ./contracts
+      dockerfile: Dockerfile
+    container_name: dgc-deployer
+    environment:
+      - RPC_URL=http://ganache:8545
+      - PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+    depends_on:
+      - ganache
+    networks:
+      - dgc-network
+    profiles:
+      - deploy
+
+networks:
+  dgc-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  ipfs-data:
+  backend-data:
