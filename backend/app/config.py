@@ -2,7 +2,6 @@
 Configuration management for the DGC backend service.
 """
 
-import os
 from typing import List, Optional
 
 from pydantic import Field

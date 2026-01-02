@@ -10,7 +10,7 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from app.services.ipfs import IPFSService, get_ipfs_service
+from app.services.ipfs import IPFSService
 
 
 @pytest.fixture

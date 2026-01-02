@@ -1,0 +1,7 @@
+[flake8]
+max-line-length = 120
+extend-ignore = E203, W503
+exclude = .venv, .git, __pycache__, build, dist
+
+# Allow a few common false positives to keep CI green while we fix remaining issues
+# F401 (unused imports) and F841 (assigned but unused) will still surface as errors

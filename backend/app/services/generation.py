@@ -7,12 +7,10 @@ image generation with Stable Diffusion and text generation with GPT-like models.
 
 import asyncio
 import hashlib
-import json
 import logging
 import time
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
@@ -253,11 +251,11 @@ class GenerationService:
         # Default parameters
         width = parameters.get("width", 1024)
         height = parameters.get("height", 1024)
-        steps = parameters.get("steps", 30)
-        guidance_scale = parameters.get("guidance_scale", 7.5)
+        _steps = parameters.get("steps", 30)
+        _guidance_scale = parameters.get("guidance_scale", 7.5)
 
         logger.info(
-            f"Generating image: prompt='{prompt[:50]}...', seed={seed}, size={width}x{height}"
+            f"Generating image: prompt='{prompt[:50]}...', seed={seed}, size={width}x{height}, steps={_steps}, guidance_scale={_guidance_scale}"
         )
 
         # Simulate generation time
@@ -286,10 +284,10 @@ class GenerationService:
         Validates: Requirements 1.2, 1.5 (Seed Reproducibility)
         """
         max_tokens = parameters.get("max_tokens", 1000)
-        temperature = parameters.get("temperature", 0.7)
+        _temperature = parameters.get("temperature", 0.7)
 
         logger.info(
-            f"Generating text: prompt='{prompt[:50]}...', seed={seed}, max_tokens={max_tokens}"
+            f"Generating text: prompt='{prompt[:50]}...', seed={seed}, max_tokens={max_tokens}, temperature={_temperature}"
         )
 
         # Simulate generation time
@@ -326,10 +324,10 @@ class GenerationService:
         For now, returns placeholder audio data.
         """
         duration = parameters.get("duration", 10)  # seconds
-        sample_rate = parameters.get("sample_rate", 44100)
+        _sample_rate = parameters.get("sample_rate", 44100)
 
         logger.info(
-            f"Generating music: prompt='{prompt[:50]}...', seed={seed}, duration={duration}s"
+            f"Generating music: prompt='{prompt[:50]}...', seed={seed}, duration={duration}s, sample_rate={_sample_rate}"
         )
 
         # Simulate generation time

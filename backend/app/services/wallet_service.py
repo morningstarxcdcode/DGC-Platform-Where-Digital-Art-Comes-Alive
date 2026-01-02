@@ -8,7 +8,6 @@ Validates: Requirements 13.1, 13.2, 13.3, 13.4, 13.5
 """
 
 import asyncio
-import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime

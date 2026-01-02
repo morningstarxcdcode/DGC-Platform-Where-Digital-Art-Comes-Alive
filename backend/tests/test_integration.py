@@ -4,11 +4,8 @@ Task 19: Final Integration Checkpoint
 Tests end-to-end workflows across all components
 """
 
-import json
-
 import pytest
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
@@ -222,13 +219,15 @@ class TestPerformanceBaselines:
         for path, method, data in endpoints:
             start = time.time()
             if method == "GET":
-                response = client.get(path)
+                _response = client.get(path)
             else:
-                response = client.post(path, json=data)
+                _response = client.post(path, json=data)
             duration = time.time() - start
 
             # API should respond within 5 seconds
             assert duration < 5.0, f"{path} took {duration}s"
+            # Ensure we at least got a response object
+            assert _response is not None
 
     def test_pagination_scales(self, client):
         """Verify pagination works with various page sizes"""
