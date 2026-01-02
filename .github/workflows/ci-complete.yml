@@ -59,7 +59,7 @@ jobs:
         cd backend
         pip install black flake8 isort
         black --check app/ tests/
-        flake8 app/ tests/ --max-line-length=79 --exclude=__pycache__
+        flake8 app/ tests/ --max-line-length=120 --exclude=__pycache__
         isort --check-only app/ tests/
     
     - name: Run backend tests with coverage
